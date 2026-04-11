@@ -153,7 +153,11 @@ export default function EquipmentDetailPage() {
         fd.append("file", pf.file);
         fd.append("componentId", savedComp.id);
         const r = await fetch("/api/equipment-component-attachments", { method: "POST", body: fd });
-        if (!r.ok) throw new Error(`Falha ao enviar arquivo "${pf.file.name}"`);
+        if (!r.ok) {
+          let detail = `HTTP ${r.status}`;
+          try { const j = await r.json(); detail = j.error ?? detail; } catch { /* ignore */ }
+          throw new Error(`Falha ao enviar "${pf.file.name}": ${detail}`);
+        }
       }
     }
   }
@@ -255,7 +259,7 @@ export default function EquipmentDetailPage() {
 
       {uploadError && (
         <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 mb-4">
-          {uploadError} — verifique se o armazenamento de arquivos está configurado no painel do Vercel.
+          {uploadError}
         </div>
       )}
 
