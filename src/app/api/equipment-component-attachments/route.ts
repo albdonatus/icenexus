@@ -33,7 +33,15 @@ export async function POST(req: NextRequest) {
 
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "bin";
   const filename = `component-attachments/comp-${componentId}-${Date.now()}.${ext}`;
-  const blob = await put(filename, file, { access: "public" });
+
+  let blob;
+  try {
+    blob = await put(filename, file, { access: "public" });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[equipment-component-attachments] blob error:", msg);
+    return NextResponse.json({ error: `Blob error: ${msg}` }, { status: 500 });
+  }
 
   const attachment = await prisma.equipmentComponentAttachment.create({
     data: { componentId, name: file.name, url: blob.url, fileType: file.type },
