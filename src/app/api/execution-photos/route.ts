@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
+import { put } from "@vercel/blob";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -28,13 +27,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Formato inválido. Use JPG, PNG ou WebP." }, { status: 400 });
   }
 
-  // Verify order belongs to this technician
   const order = await prisma.serviceOrder.findUnique({
     where: { id: serviceOrderId, technicianId: session.user.id },
   });
   if (!order) return NextResponse.json({ error: "Ordem não encontrada" }, { status: 404 });
 
-  // Upsert execution so we always have a record to attach the photo to
   const execution = await prisma.actionExecution.upsert({
     where: { serviceOrderId_actionId: { serviceOrderId, actionId } },
     create: { serviceOrderId, actionId, observation: null },
@@ -42,14 +39,11 @@ export async function POST(req: NextRequest) {
   });
 
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-  const filename = `exec-${execution.id}-${Date.now()}.${ext}`;
-  const uploadDir = path.join(process.cwd(), "public", "uploads", "execution-photos");
-  await mkdir(uploadDir, { recursive: true });
-  await writeFile(path.join(uploadDir, filename), Buffer.from(await file.arrayBuffer()));
+  const filename = `execution-photos/exec-${execution.id}-${Date.now()}.${ext}`;
+  const blob = await put(filename, file, { access: "public" });
 
-  const url = `/uploads/execution-photos/${filename}`;
   const photo = await prisma.executionPhoto.create({
-    data: { executionId: execution.id, url },
+    data: { executionId: execution.id, url: blob.url },
   });
 
   return NextResponse.json(photo, { status: 201 });

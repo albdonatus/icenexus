@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
+import { put } from "@vercel/blob";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -22,18 +21,13 @@ export async function POST(req: NextRequest) {
   }
 
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-  const filename = `${session.user.id}.${ext}`;
-  const uploadDir = path.join(process.cwd(), "public", "uploads", "avatars");
+  const filename = `avatars/${session.user.id}-${Date.now()}.${ext}`;
+  const blob = await put(filename, file, { access: "public" });
 
-  await mkdir(uploadDir, { recursive: true });
-  const buffer = Buffer.from(await file.arrayBuffer());
-  await writeFile(path.join(uploadDir, filename), buffer);
-
-  const imageUrl = `/uploads/avatars/${filename}`;
   await prisma.user.update({
     where: { id: session.user.id },
-    data: { image: imageUrl },
+    data: { image: blob.url },
   });
 
-  return NextResponse.json({ image: imageUrl });
+  return NextResponse.json({ image: blob.url });
 }

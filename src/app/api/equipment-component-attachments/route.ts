@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
+import { put } from "@vercel/blob";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -18,7 +17,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Campos obrigatórios ausentes" }, { status: 400 });
   }
 
-  // Verify component belongs to this company
   const component = await prisma.equipmentComponent.findFirst({
     where: { id: componentId, equipment: { companyId: session.user.companyId } },
   });
@@ -34,14 +32,11 @@ export async function POST(req: NextRequest) {
   }
 
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "bin";
-  const filename = `comp-${componentId}-${Date.now()}.${ext}`;
-  const uploadDir = path.join(process.cwd(), "public", "uploads", "component-attachments");
-  await mkdir(uploadDir, { recursive: true });
-  await writeFile(path.join(uploadDir, filename), Buffer.from(await file.arrayBuffer()));
+  const filename = `component-attachments/comp-${componentId}-${Date.now()}.${ext}`;
+  const blob = await put(filename, file, { access: "public" });
 
-  const url = `/uploads/component-attachments/${filename}`;
   const attachment = await prisma.equipmentComponentAttachment.create({
-    data: { componentId, name: file.name, url, fileType: file.type },
+    data: { componentId, name: file.name, url: blob.url, fileType: file.type },
   });
 
   return NextResponse.json(attachment, { status: 201 });
