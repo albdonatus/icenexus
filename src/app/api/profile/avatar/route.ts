@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
 
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
   const filename = `avatars/${session.user.id}-${Date.now()}.${ext}`;
-  const blob = await put(filename, file, { access: "public" });
+  const blob = await put(filename, file, { access: "public", token: process.env.blob_READ_WRITE_TOKEN });
 
   await prisma.user.update({
     where: { id: session.user.id },

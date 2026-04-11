@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
 
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
   const filename = `execution-photos/exec-${execution.id}-${Date.now()}.${ext}`;
-  const blob = await put(filename, file, { access: "public" });
+  const blob = await put(filename, file, { access: "public", token: process.env.blob_READ_WRITE_TOKEN });
 
   const photo = await prisma.executionPhoto.create({
     data: { executionId: execution.id, url: blob.url },

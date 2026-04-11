@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
 
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "bin";
   const filename = `action-attachments/${actionId}-${Date.now()}.${ext}`;
-  const blob = await put(filename, file, { access: "public" });
+  const blob = await put(filename, file, { access: "public", token: process.env.blob_READ_WRITE_TOKEN });
 
   const fileType = file.type === "application/pdf" ? "PDF" : "IMAGE";
   const attachment = await prisma.actionAttachment.create({

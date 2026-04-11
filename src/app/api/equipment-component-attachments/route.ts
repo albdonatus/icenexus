@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
 
   let blob;
   try {
-    blob = await put(filename, file, { access: "public" });
+    blob = await put(filename, file, { access: "public", token: process.env.blob_READ_WRITE_TOKEN });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[equipment-component-attachments] blob error:", msg);
