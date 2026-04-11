@@ -1,0 +1,243 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  MANAGER
+  TECHNICIAN
+  SUPERADMIN
+}
+
+enum ServiceOrderStatus {
+  PENDING
+  IN_EXECUTION
+  COMPLETED
+}
+
+enum ActionStatus {
+  DONE
+  NOT_DONE
+  NOT_APPLICABLE
+}
+
+enum ActionType {
+  TEXT
+  NUMBER
+  BOOLEAN
+}
+
+model User {
+  id           String   @id @default(cuid())
+  companyId    String?
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role
+  active       Boolean  @default(true)
+  phone        String?
+  image        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  serviceOrders ServiceOrder[] @relation("TechnicianOrders")
+
+  @@map("users")
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  companyId String?
+  name      String
+  document  String?
+  email     String?
+  phone     String?
+  address   String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  equipment     Equipment[]
+  serviceOrders ServiceOrder[]
+
+  @@map("clients")
+}
+
+model Equipment {
+  id           String    @id @default(cuid())
+  companyId    String?
+  clientId     String
+  name         String
+  type         String
+  brand        String?
+  model        String?
+  serialNumber String?
+  installDate  DateTime?
+  notes        String?
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  client        Client               @relation(fields: [clientId], references: [id])
+  serviceOrders ServiceOrder[]
+  components    EquipmentComponent[]
+
+  @@map("equipment")
+}
+
+model EquipmentComponent {
+  id          String                   @id @default(cuid())
+  equipmentId String
+  name        String
+  order       Int                      @default(0)
+  createdAt   DateTime                 @default(now())
+
+  equipment   Equipment                        @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  items       EquipmentComponentItem[]
+  attachments EquipmentComponentAttachment[]
+
+  @@map("equipment_components")
+}
+
+model EquipmentComponentAttachment {
+  id          String   @id @default(cuid())
+  componentId String
+  name        String
+  url         String
+  fileType    String
+  createdAt   DateTime @default(now())
+
+  component EquipmentComponent @relation(fields: [componentId], references: [id], onDelete: Cascade)
+
+  @@map("equipment_component_attachments")
+}
+
+model EquipmentComponentItem {
+  id          String   @id @default(cuid())
+  componentId String
+  name        String
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  component EquipmentComponent @relation(fields: [componentId], references: [id], onDelete: Cascade)
+
+  @@map("equipment_component_items")
+}
+
+model ChecklistTemplate {
+  id            String   @id @default(cuid())
+  companyId     String?
+  name          String
+  description   String?
+  equipmentType String?
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  components    ChecklistComponent[]
+  serviceOrders ServiceOrder[]
+
+  @@map("checklist_templates")
+}
+
+model ChecklistComponent {
+  id         String   @id @default(cuid())
+  templateId String
+  name       String
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  template ChecklistTemplate   @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  actions  MaintenanceAction[]
+
+  @@map("checklist_components")
+}
+
+model MaintenanceAction {
+  id             String     @id @default(cuid())
+  componentId    String
+  description    String
+  type           ActionType @default(TEXT)
+  units          String[]   @default([])
+  recommendation String?
+  order          Int        @default(0)
+  createdAt      DateTime   @default(now())
+
+  component   ChecklistComponent  @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  executions  ActionExecution[]
+  attachments ActionAttachment[]
+
+  @@map("maintenance_actions")
+}
+
+model ActionAttachment {
+  id        String   @id @default(cuid())
+  actionId  String
+  name      String
+  url       String
+  fileType  String
+  createdAt DateTime @default(now())
+
+  action MaintenanceAction @relation(fields: [actionId], references: [id], onDelete: Cascade)
+
+  @@map("action_attachments")
+}
+
+model ServiceOrder {
+  id            String             @id @default(cuid())
+  companyId     String?
+  clientId      String
+  equipmentId   String
+  technicianId  String
+  templateId    String
+  scheduledDate DateTime
+  status        ServiceOrderStatus @default(PENDING)
+  notes         String?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  client     Client            @relation(fields: [clientId], references: [id])
+  equipment  Equipment         @relation(fields: [equipmentId], references: [id])
+  technician User              @relation("TechnicianOrders", fields: [technicianId], references: [id])
+  template   ChecklistTemplate @relation(fields: [templateId], references: [id])
+  executions ActionExecution[]
+
+  @@map("service_orders")
+}
+
+model ActionExecution {
+  id             String        @id @default(cuid())
+  serviceOrderId String
+  actionId       String
+  status         ActionStatus?
+  numberValue    Float?
+  unit           String?
+  booleanValue   Boolean?
+  observation    String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  serviceOrder ServiceOrder      @relation(fields: [serviceOrderId], references: [id])
+  action       MaintenanceAction @relation(fields: [actionId], references: [id])
+  photos       ExecutionPhoto[]
+
+  @@unique([serviceOrderId, actionId])
+  @@map("action_executions")
+}
+
+model ExecutionPhoto {
+  id          String   @id @default(cuid())
+  executionId String
+  url         String
+  createdAt   DateTime @default(now())
+
+  execution ActionExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+
+  @@map("execution_photos")
+}
