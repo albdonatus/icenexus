@@ -170,8 +170,7 @@ export default function EquipmentDetailPage() {
     );
   }
 
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSave() {
     setLoading(true);
     setUploadError("");
 
@@ -194,16 +193,19 @@ export default function EquipmentDetailPage() {
     if (res.ok) {
       const saved = await res.json();
       const hasPending = snapshot.some((c) => c.pendingFiles.length > 0);
+      let uploadFailed = false;
       if (hasPending && saved.components?.length > 0) {
         try {
           await uploadPendingFiles(saved.components, snapshot);
         } catch (err) {
+          uploadFailed = true;
           setUploadError(err instanceof Error ? err.message : "Erro ao enviar arquivo");
         }
       }
       // Always reload to get fresh attachment data
       await reloadComponents();
-      setEditing(false);
+      // Stay in edit mode if an upload failed so the user can retry
+      if (!uploadFailed) setEditing(false);
     }
 
     setLoading(false);
@@ -257,7 +259,7 @@ export default function EquipmentDetailPage() {
         </div>
       )}
 
-      <form onSubmit={handleSave} className="space-y-4">
+      <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
         {/* Basic info */}
         <Card>
           <CardHeader><h2 className="font-semibold text-gray-700">Dados do Equipamento</h2></CardHeader>
