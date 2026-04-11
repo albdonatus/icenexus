@@ -43,6 +43,7 @@ export default function EquipmentDetailPage() {
   });
   const [components, setComponents] = useState<EquipComp[]>([]);
   const [deletingAttachment, setDeletingAttachment] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState("");
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   useEffect(() => {
@@ -135,32 +136,53 @@ export default function EquipmentDetailPage() {
     setDeletingAttachment(null);
   }
 
-  async function uploadPendingFiles(savedComponents: { id: string; order: number }[]) {
+  async function uploadPendingFiles(savedComponents: { id: string; order: number }[], currentComps: EquipComp[]) {
+    // Match saved components by order index
     const sorted = [...savedComponents].sort((a, b) => a.order - b.order);
-    for (let i = 0; i < components.length; i++) {
-      const comp = components[i];
-      const savedComp = sorted[i];
-      if (!savedComp || comp.pendingFiles.length === 0) continue;
+    // Also try to match by id for existing components
+    for (let i = 0; i < currentComps.length; i++) {
+      const comp = currentComps[i];
+      if (comp.pendingFiles.length === 0) continue;
+      // Find the saved component: by id if it's a real CUID, otherwise by position
+      const savedComp = comp.id.length > 10
+        ? savedComponents.find((s) => s.id === comp.id) ?? sorted[i]
+        : sorted[i];
+      if (!savedComp) continue;
       for (const pf of comp.pendingFiles) {
         const fd = new FormData();
         fd.append("file", pf.file);
         fd.append("componentId", savedComp.id);
-        await fetch("/api/equipment-component-attachments", { method: "POST", body: fd });
+        const r = await fetch("/api/equipment-component-attachments", { method: "POST", body: fd });
+        if (!r.ok) throw new Error(`Falha ao enviar arquivo "${pf.file.name}"`);
       }
     }
+  }
+
+  async function reloadComponents() {
+    const fresh = await fetch(`/api/equipment/${id}`).then((r) => r.json());
+    setComponents(
+      (fresh.components || []).map((c: EquipComp) => ({
+        ...c,
+        open: true,
+        attachments: c.attachments || [],
+        pendingFiles: [],
+      }))
+    );
   }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    setUploadError("");
+
+    const snapshot = components; // capture state before any async operations
 
     const res = await fetch(`/api/equipment/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...form,
-        components: components.map((comp, ci) => ({
-          // Send id only for existing DB components (CUIDs are longer than genId strings)
+        components: snapshot.map((comp, ci) => ({
           id: comp.id.length > 10 ? comp.id : undefined,
           name: comp.name,
           order: ci,
@@ -171,24 +193,20 @@ export default function EquipmentDetailPage() {
 
     if (res.ok) {
       const saved = await res.json();
-      if (saved.components?.length > 0) {
-        await uploadPendingFiles(saved.components);
+      const hasPending = snapshot.some((c) => c.pendingFiles.length > 0);
+      if (hasPending && saved.components?.length > 0) {
+        try {
+          await uploadPendingFiles(saved.components, snapshot);
+        } catch (err) {
+          setUploadError(err instanceof Error ? err.message : "Erro ao enviar arquivo");
+        }
       }
-      // Reload to get fresh attachment data
-      const fresh = await fetch(`/api/equipment/${id}`).then((r) => r.json());
-      setComponents(
-        (fresh.components || []).map((c: EquipComp) => ({
-          ...c,
-          open: true,
-          attachments: c.attachments || [],
-          pendingFiles: [],
-        }))
-      );
+      // Always reload to get fresh attachment data
+      await reloadComponents();
+      setEditing(false);
     }
 
     setLoading(false);
-    setEditing(false);
-    router.refresh();
   }
 
   return (
@@ -232,6 +250,12 @@ export default function EquipmentDetailPage() {
           </div>
         )}
       </div>
+
+      {uploadError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 mb-4">
+          {uploadError} — verifique se o armazenamento de arquivos está configurado no painel do Vercel.
+        </div>
+      )}
 
       <form onSubmit={handleSave} className="space-y-4">
         {/* Basic info */}
