@@ -5,6 +5,7 @@ import {
   View,
   StyleSheet,
   renderToBuffer,
+  Image,
 } from "@react-pdf/renderer";
 import type { ActionStatus, ActionType } from "@prisma/client";
 import { formatDate, formatDateTime } from "@/lib/utils";
@@ -106,6 +107,8 @@ const styles = StyleSheet.create({
   statusDone: { color: "#16a34a" },
   statusNotDone: { color: "#dc2626" },
   statusNA: { color: "#9ca3af" },
+  photoRow: { flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 4 },
+  photo: { width: 64, height: 64, borderRadius: 3, objectFit: "cover" },
   footer: {
     marginTop: 20,
     paddingTop: 10,
@@ -167,6 +170,7 @@ interface PdfOrderData {
     unit: string | null;
     booleanValue: boolean | null;
     observation: string | null;
+    photos: { id: string; url: string }[];
   }[];
 }
 
@@ -324,6 +328,13 @@ function OrderDocument({ order }: { order: PdfOrderData }) {
                       )}
                       {exec?.observation && (
                         <Text style={styles.actionObservation}>Obs: {exec.observation}</Text>
+                      )}
+                      {exec?.photos && exec.photos.length > 0 && (
+                        <View style={styles.photoRow}>
+                          {exec.photos.map((photo) => (
+                            <Image key={photo.id} src={photo.url} style={styles.photo} />
+                          ))}
+                        </View>
                       )}
                     </View>
                     {action.type === "TEXT" && valueText && (

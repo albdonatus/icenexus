@@ -25,7 +25,7 @@ export default async function ServiceOrderDetailPage({ params }: { params: Promi
           },
         },
       },
-      executions: true,
+      executions: { include: { photos: true } },
     },
   });
 
@@ -162,6 +162,19 @@ export default async function ServiceOrderDetailPage({ params }: { params: Promi
                           <p className="text-sm text-gray-800">{action.description}</p>
                           {exec?.observation && (
                             <p className="text-xs text-gray-400 mt-0.5 italic">{exec.observation}</p>
+                          )}
+                          {exec?.photos && exec.photos.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {exec.photos.map((photo: { id: string; url: string }) => (
+                                <a key={photo.id} href={photo.url} target="_blank" rel="noopener noreferrer">
+                                  <img
+                                    src={photo.url}
+                                    alt="Foto de execução"
+                                    className="w-16 h-16 object-cover rounded-lg border border-gray-200 hover:opacity-80 transition-opacity"
+                                  />
+                                </a>
+                              ))}
+                            </div>
                           )}
                         </div>
                         {valueDisplay}
