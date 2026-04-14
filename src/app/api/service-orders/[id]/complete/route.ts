@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+function nextDate(date: Date, recurrence: string): Date {
+  const d = new Date(date);
+  if (recurrence === "MONTHLY")   { d.setMonth(d.getMonth() + 1); }
+  if (recurrence === "QUARTERLY") { d.setMonth(d.getMonth() + 3); }
+  if (recurrence === "SEMIANNUAL"){ d.setMonth(d.getMonth() + 6); }
+  if (recurrence === "ANNUAL")    { d.setFullYear(d.getFullYear() + 1); }
+  return d;
+}
+
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session || session.user.role !== "TECHNICIAN") {
@@ -23,6 +32,24 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     where: { id },
     data: { status: "COMPLETED", completedAt: new Date() },
   });
+
+  // Auto-create next occurrence if recurring
+  if (order.recurrence && order.recurrenceGroupId) {
+    const next = nextDate(order.scheduledDate, order.recurrence);
+    await prisma.serviceOrder.create({
+      data: {
+        companyId: order.companyId,
+        clientId: order.clientId,
+        equipmentId: order.equipmentId,
+        technicianId: order.technicianId,
+        templateId: order.templateId,
+        notes: order.notes,
+        scheduledDate: next,
+        recurrence: order.recurrence,
+        recurrenceGroupId: order.recurrenceGroupId,
+      },
+    });
+  }
 
   return NextResponse.json(updated);
 }

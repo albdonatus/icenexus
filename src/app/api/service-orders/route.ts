@@ -44,13 +44,18 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { clientId, equipmentId, templateId, scheduledDate, notes } = body;
+  const { clientId, equipmentId, templateId, scheduledDate, notes, recurrence } = body;
   // Manager can assign any technician; technician is auto-assigned to themselves
   const technicianId = session.user.role === "MANAGER" ? body.technicianId : session.user.id;
 
   if (!clientId || !equipmentId || !technicianId || !templateId || !scheduledDate) {
     return NextResponse.json({ error: "Campos obrigatórios ausentes" }, { status: 400 });
   }
+
+  const validRecurrences = ["MONTHLY", "QUARTERLY", "SEMIANNUAL", "ANNUAL"];
+  const recurrenceValue = recurrence && validRecurrences.includes(recurrence) ? recurrence : null;
+  // New recurring OS gets a fresh group id; non-recurring has none
+  const recurrenceGroupId = recurrenceValue ? crypto.randomUUID() : null;
 
   const order = await prisma.serviceOrder.create({
     data: {
@@ -61,6 +66,8 @@ export async function POST(req: NextRequest) {
       scheduledDate: new Date(scheduledDate),
       notes,
       companyId: session.user.companyId,
+      recurrence: recurrenceValue,
+      recurrenceGroupId,
     },
     include: {
       client: { select: { id: true, name: true } },

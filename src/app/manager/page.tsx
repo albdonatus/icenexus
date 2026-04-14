@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { Briefcase, Users, DollarSign, FileText } from "lucide-react";
+import { Briefcase, Users, DollarSign, FileText, RefreshCw } from "lucide-react";
 import DashboardCalendar, { type CalendarOrder } from "@/components/dashboard/DashboardCalendar";
 import OrderTableRow from "@/components/dashboard/OrderTableRow";
 
@@ -51,7 +51,7 @@ export default async function DashboardPage() {
   const threeMonthsAhead = new Date(now.getFullYear(), now.getMonth() + 3, 1);
   const threeMonthsBack = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
-  const [completedThisMonth, newClientsThisMonth, totalOrders, totalClients, recentOrders, calendarOrders] =
+  const [completedThisMonth, newClientsThisMonth, totalOrders, totalClients, recentOrders, calendarOrders, upcomingOrders] =
     await Promise.all([
       prisma.serviceOrder.count({ where: { companyId, status: "COMPLETED", completedAt: { gte: startOfMonth } } }),
       prisma.client.count({ where: { companyId, active: true, createdAt: { gte: startOfMonth } } }),
@@ -69,6 +69,16 @@ export default async function DashboardPage() {
       prisma.serviceOrder.findMany({
         where: { companyId, scheduledDate: { gte: threeMonthsBack, lte: threeMonthsAhead } },
         select: { id: true, scheduledDate: true, status: true, client: { select: { name: true } }, technician: { select: { name: true } } },
+      }),
+      prisma.serviceOrder.findMany({
+        take: 10,
+        where: { companyId, status: "PENDING", scheduledDate: { gte: now } },
+        orderBy: { scheduledDate: "asc" },
+        include: {
+          client: { select: { name: true } },
+          technician: { select: { name: true } },
+          equipment: { select: { name: true } },
+        },
       }),
     ]);
 
@@ -119,6 +129,48 @@ export default async function DashboardPage() {
               <p className="text-xs text-gray-400 mt-1">Receita no período</p>
             </div>
           </div>
+        </div>
+
+        {/* Próximas OS */}
+        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <RefreshCw className="w-4 h-4 text-violet-500" />
+              <h2 className="text-sm font-semibold text-gray-800">Próximas Ordens de Serviço</h2>
+            </div>
+            <Link href="/manager/service-orders?status=PENDING" className="text-xs text-violet-600 hover:underline font-medium">Ver todas</Link>
+          </div>
+          {upcomingOrders.length === 0 ? (
+            <div className="px-5 py-6 text-center text-gray-400 text-sm">Nenhuma OS pendente agendada.</div>
+          ) : (
+            <div className="divide-y divide-gray-50">
+              {upcomingOrders.map((order) => {
+                const daysUntil = Math.ceil((new Date(order.scheduledDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                const isToday = daysUntil === 0;
+                const isTomorrow = daysUntil === 1;
+                const isOverdue = daysUntil < 0;
+                return (
+                  <Link key={order.id} href={`/manager/service-orders/${order.id}`} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors">
+                    <div className={`w-10 h-10 rounded-lg flex flex-col items-center justify-center flex-shrink-0 text-center ${isOverdue ? "bg-red-50" : isToday ? "bg-violet-50" : "bg-gray-50"}`}>
+                      <span className={`text-[10px] font-bold uppercase leading-none ${isOverdue ? "text-red-500" : isToday ? "text-violet-600" : "text-gray-400"}`}>
+                        {new Date(order.scheduledDate).toLocaleDateString("pt-BR", { month: "short" })}
+                      </span>
+                      <span className={`text-lg font-bold leading-tight ${isOverdue ? "text-red-600" : isToday ? "text-violet-700" : "text-gray-700"}`}>
+                        {new Date(order.scheduledDate).getDate()}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-800 truncate">{order.client.name}</p>
+                      <p className="text-xs text-gray-400 truncate">{order.equipment.name} · {order.technician.name}</p>
+                    </div>
+                    <span className={`text-xs font-medium flex-shrink-0 ${isOverdue ? "text-red-500" : isToday ? "text-violet-600" : isTomorrow ? "text-amber-500" : "text-gray-400"}`}>
+                      {isOverdue ? `${Math.abs(daysUntil)}d atraso` : isToday ? "Hoje" : isTomorrow ? "Amanhã" : `${daysUntil}d`}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">

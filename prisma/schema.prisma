@@ -25,6 +25,13 @@ enum ActionStatus {
   NOT_APPLICABLE
 }
 
+enum RecurrenceType {
+  MONTHLY
+  QUARTERLY
+  SEMIANNUAL
+  ANNUAL
+}
+
 enum ActionType {
   TEXT
   NUMBER
@@ -196,13 +203,15 @@ model ServiceOrder {
   equipmentId   String
   technicianId  String
   templateId    String
-  scheduledDate DateTime
-  status        ServiceOrderStatus @default(PENDING)
-  notes         String?
-  startedAt     DateTime?
-  completedAt   DateTime?
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
+  scheduledDate     DateTime
+  status            ServiceOrderStatus @default(PENDING)
+  notes             String?
+  startedAt         DateTime?
+  completedAt       DateTime?
+  recurrence        RecurrenceType?
+  recurrenceGroupId String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
 
   client     Client            @relation(fields: [clientId], references: [id])
   equipment  Equipment         @relation(fields: [equipmentId], references: [id])

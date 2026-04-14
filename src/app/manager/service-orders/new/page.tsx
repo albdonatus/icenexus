@@ -28,6 +28,7 @@ export default function NewServiceOrderPage() {
     templateId: "",
     scheduledDate: "",
     notes: "",
+    recurrence: "",
   });
 
   useEffect(() => { markDirty(); }, []);
@@ -117,6 +118,37 @@ export default function NewServiceOrderPage() {
             </Select>
 
             <Input label="Data de Agendamento *" type="date" value={form.scheduledDate} onChange={(e) => update("scheduledDate", e.target.value)} required />
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Recorrência</label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { value: "", label: "Sem recorrência" },
+                  { value: "MONTHLY", label: "Mensal" },
+                  { value: "QUARTERLY", label: "Trimestral" },
+                  { value: "SEMIANNUAL", label: "Semestral" },
+                  { value: "ANNUAL", label: "Anual" },
+                ].map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => update("recurrence", opt.value)}
+                    className={`text-sm px-3 py-1.5 rounded-lg border font-medium transition-all ${
+                      form.recurrence === opt.value
+                        ? "bg-violet-600 text-white border-violet-600"
+                        : "bg-white text-gray-500 border-gray-200 hover:border-violet-300"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              {form.recurrence && (
+                <p className="text-xs text-violet-600 mt-1.5">
+                  ✓ A próxima OS será criada automaticamente ao concluir esta.
+                </p>
+              )}
+            </div>
 
             <Textarea label="Observações" placeholder="Instruções adicionais para o técnico..." value={form.notes} onChange={(e) => update("notes", e.target.value)} rows={3} />
 
