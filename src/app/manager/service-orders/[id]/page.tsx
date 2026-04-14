@@ -7,6 +7,7 @@ import Button from "@/components/ui/Button";
 import Card, { CardContent, CardHeader } from "@/components/ui/Card";
 import { OrderStatusBadge } from "@/components/ui/Badge";
 import { formatDate, formatDateTime } from "@/lib/utils";
+import ShareReportButton from "@/components/service-orders/ShareReportButton";
 
 export default async function ServiceOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -69,12 +70,15 @@ export default async function ServiceOrderDetailPage({ params }: { params: Promi
             </Link>
           )}
           {order.status === "COMPLETED" && (
-            <a href={`/api/service-orders/${id}/pdf`} target="_blank">
-              <Button variant="secondary" size="sm">
-                <Download className="w-3.5 h-3.5 mr-1" />
-                Baixar PDF
-              </Button>
-            </a>
+            <>
+              <a href={`/api/service-orders/${id}/pdf`} target="_blank">
+                <Button variant="secondary" size="sm">
+                  <Download className="w-3.5 h-3.5 mr-1" />
+                  Baixar PDF
+                </Button>
+              </a>
+              <ShareReportButton orderId={id} />
+            </>
           )}
         </div>
       </div>
