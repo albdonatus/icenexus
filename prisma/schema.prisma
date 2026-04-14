@@ -29,6 +29,8 @@ enum ActionType {
   TEXT
   NUMBER
   BOOLEAN
+  NUMBER_TEXT
+  NUMBER_BOOLEAN
 }
 
 model User {

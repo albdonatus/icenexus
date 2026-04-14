@@ -10,7 +10,7 @@ import Input from "@/components/ui/Input";
 import Card, { CardContent, CardHeader } from "@/components/ui/Card";
 import { UNIT_GROUPS } from "@/lib/units";
 
-type ActionType = "TEXT" | "NUMBER" | "BOOLEAN";
+type ActionType = "TEXT" | "NUMBER" | "BOOLEAN" | "NUMBER_TEXT" | "NUMBER_BOOLEAN";
 
 interface ExistingAttachment {
   id: string;
@@ -66,13 +66,31 @@ const ACTION_TYPE_LABELS: Record<ActionType, string> = {
   TEXT: "Verificação",
   NUMBER: "Medição",
   BOOLEAN: "Troca / Confirmação",
+  NUMBER_TEXT: "Medição + Verificação",
+  NUMBER_BOOLEAN: "Medição + Troca",
 };
 
 const ACTION_TYPE_COLORS: Record<ActionType, string> = {
   TEXT: "bg-gray-100 text-gray-700",
   NUMBER: "bg-blue-100 text-blue-700",
   BOOLEAN: "bg-green-100 text-green-700",
+  NUMBER_TEXT: "bg-blue-100 text-blue-700",
+  NUMBER_BOOLEAN: "bg-blue-100 text-blue-700",
 };
+
+// Helpers to decompose/compose types
+function hasNumber(type: ActionType) { return type === "NUMBER" || type === "NUMBER_TEXT" || type === "NUMBER_BOOLEAN"; }
+function hasStatus(type: ActionType) { return type === "TEXT" || type === "NUMBER_TEXT"; }
+function hasBoolean(type: ActionType) { return type === "BOOLEAN" || type === "NUMBER_BOOLEAN"; }
+
+function buildType(wantNumber: boolean, statusType: "TEXT" | "BOOLEAN" | null): ActionType {
+  if (wantNumber && statusType === "TEXT") return "NUMBER_TEXT";
+  if (wantNumber && statusType === "BOOLEAN") return "NUMBER_BOOLEAN";
+  if (wantNumber) return "NUMBER";
+  if (statusType === "TEXT") return "TEXT";
+  if (statusType === "BOOLEAN") return "BOOLEAN";
+  return "TEXT";
+}
 
 type EquipmentOption = { id: string; name: string; type: string; client: { name: string }; _count: { components: number } };
 type EquipmentComponentData = {
@@ -243,7 +261,7 @@ export default function ChecklistTemplateBuilder({ initialData, mode }: Checklis
               ...c,
               actions: c.actions.map((a) =>
                 a.id === actionId
-                  ? { ...a, [field]: value, ...(field === "type" && value !== "NUMBER" ? { units: [] } : {}) }
+                  ? { ...a, [field]: value, ...(field === "type" && !hasNumber(value as ActionType) ? { units: [] } : {}) }
                   : a
               ),
             }
@@ -411,11 +429,12 @@ export default function ChecklistTemplateBuilder({ initialData, mode }: Checklis
 
       {/* Legend */}
       <div className="flex gap-3 mb-4 text-xs">
-        {(Object.entries(ACTION_TYPE_LABELS) as [ActionType, string][]).map(([type, label]) => (
+        {(["TEXT", "NUMBER", "BOOLEAN"] as ActionType[]).map((type) => (
           <span key={type} className={`px-2 py-1 rounded-full font-medium ${ACTION_TYPE_COLORS[type]}`}>
-            {label}
+            {ACTION_TYPE_LABELS[type]}
           </span>
         ))}
+        <span className="text-gray-400 self-center">· Medição pode ser combinada com os demais</span>
       </div>
 
       {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 mb-4">{error}</div>}
@@ -493,21 +512,40 @@ export default function ChecklistTemplateBuilder({ initialData, mode }: Checklis
                     </div>
 
                     {/* Type selector */}
-                    <div className="flex gap-2 ml-7">
-                      {(["TEXT", "NUMBER", "BOOLEAN"] as ActionType[]).map((type) => (
-                        <button
-                          key={type}
-                          type="button"
-                          onClick={() => updateAction(comp.id, action.id, "type", type)}
-                          className={`text-xs px-2.5 py-1 rounded-full font-medium transition-all border ${
-                            action.type === type
-                              ? `${ACTION_TYPE_COLORS[type]} border-transparent`
-                              : "bg-white text-gray-400 border-gray-200"
-                          }`}
-                        >
-                          {ACTION_TYPE_LABELS[type]}
-                        </button>
-                      ))}
+                    <div className="ml-7 flex flex-wrap items-center gap-2">
+                      {/* Status group — mutually exclusive */}
+                      {(["TEXT", "BOOLEAN"] as const).map((st) => {
+                        const active = hasStatus(action.type) && st === "TEXT" || hasBoolean(action.type) && st === "BOOLEAN";
+                        return (
+                          <button
+                            key={st}
+                            type="button"
+                            onClick={() => {
+                              const currentStatus = active ? null : st;
+                              updateAction(comp.id, action.id, "type", buildType(hasNumber(action.type), currentStatus));
+                            }}
+                            className={`text-xs px-2.5 py-1 rounded-full font-medium transition-all border ${
+                              active ? `${ACTION_TYPE_COLORS[st]} border-transparent` : "bg-white text-gray-400 border-gray-200 hover:border-gray-300"
+                            }`}
+                          >
+                            {ACTION_TYPE_LABELS[st]}
+                          </button>
+                        );
+                      })}
+                      <span className="text-gray-200 text-xs">|</span>
+                      {/* Measurement — independent toggle */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const currentStatus = hasStatus(action.type) ? "TEXT" : hasBoolean(action.type) ? "BOOLEAN" : null;
+                          updateAction(comp.id, action.id, "type", buildType(!hasNumber(action.type), currentStatus));
+                        }}
+                        className={`text-xs px-2.5 py-1 rounded-full font-medium transition-all border ${
+                          hasNumber(action.type) ? `${ACTION_TYPE_COLORS.NUMBER} border-transparent` : "bg-white text-gray-400 border-gray-200 hover:border-gray-300"
+                        }`}
+                      >
+                        Medição
+                      </button>
                     </div>
 
                     {/* Units (NUMBER only) */}

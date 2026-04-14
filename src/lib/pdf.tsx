@@ -313,6 +313,18 @@ function OrderDocument({ order }: { order: PdfOrderData }) {
                   if (exec?.booleanValue === true) { iconText = "✓"; iconStyle = styles.statusDone; valueText = "Sim"; }
                   else if (exec?.booleanValue === false) { iconText = "✗"; iconStyle = styles.statusNotDone; valueText = "Não"; }
                   else { valueText = "Não preenchido"; }
+                } else if (action.type === "NUMBER_TEXT") {
+                  const num = exec?.numberValue != null ? `${exec.numberValue} ${exec.unit ?? ""}` : "—";
+                  const st = exec?.status ? textStatusLabel(exec.status) : "—";
+                  iconText = exec?.status ? textStatusIcon(exec.status) : "—";
+                  iconStyle = exec?.status ? textStatusStyle(exec.status) : styles.statusNA;
+                  valueText = `${num} · ${st}`;
+                } else if (action.type === "NUMBER_BOOLEAN") {
+                  const num = exec?.numberValue != null ? `${exec.numberValue} ${exec.unit ?? ""}` : "—";
+                  const bl = exec?.booleanValue === true ? "Sim" : exec?.booleanValue === false ? "Não" : "—";
+                  iconText = exec?.booleanValue === true ? "✓" : exec?.booleanValue === false ? "✗" : "—";
+                  iconStyle = exec?.booleanValue === true ? styles.statusDone : exec?.booleanValue === false ? styles.statusNotDone : styles.statusNA;
+                  valueText = `${num} · ${bl}`;
                 }
 
                 return (

@@ -128,6 +128,8 @@ export default function ExecutionScreen({
     if (action.type === "TEXT") return !!exec.status;
     if (action.type === "NUMBER") return exec.numberValue !== undefined && exec.numberValue !== "" && !!exec.unit;
     if (action.type === "BOOLEAN") return exec.booleanValue !== undefined;
+    if (action.type === "NUMBER_TEXT") return exec.numberValue !== undefined && exec.numberValue !== "" && !!exec.unit && !!exec.status;
+    if (action.type === "NUMBER_BOOLEAN") return exec.numberValue !== undefined && exec.numberValue !== "" && !!exec.unit && exec.booleanValue !== undefined;
     return false;
   }
 
@@ -356,13 +358,15 @@ export default function ExecutionScreen({
                           <p className="text-sm text-gray-800 font-medium">{action.description}</p>
                           <span className={cn(
                             "text-xs px-2 py-0.5 rounded-full flex-shrink-0",
-                            action.type === "TEXT" && "bg-gray-100 text-gray-500",
-                            action.type === "NUMBER" && "bg-blue-100 text-blue-600",
-                            action.type === "BOOLEAN" && "bg-green-100 text-green-600",
+                            (action.type === "TEXT") && "bg-gray-100 text-gray-500",
+                            (action.type === "NUMBER" || action.type === "NUMBER_TEXT" || action.type === "NUMBER_BOOLEAN") && "bg-blue-100 text-blue-600",
+                            (action.type === "BOOLEAN") && "bg-green-100 text-green-600",
                           )}>
                             {action.type === "TEXT" && "Verificação"}
                             {action.type === "NUMBER" && "Medição"}
                             {action.type === "BOOLEAN" && "Confirmação"}
+                            {action.type === "NUMBER_TEXT" && "Medição + Verificação"}
+                            {action.type === "NUMBER_BOOLEAN" && "Medição + Troca"}
                           </span>
                         </div>
 
@@ -498,6 +502,80 @@ export default function ExecutionScreen({
                               {exec?.booleanValue === true ? "✓ Sim" : exec?.booleanValue === false ? "✗ Não" : "Não preenchido"}
                             </div>
                           )
+                        )}
+
+                        {/* NUMBER_TEXT — medição + verificação */}
+                        {(action.type === "NUMBER_TEXT" || action.type === "NUMBER_BOOLEAN") && (
+                          <div className="space-y-2">
+                            {/* Measurement field */}
+                            {!isReadOnly ? (
+                              <div className="flex gap-2 items-center">
+                                <input
+                                  type="number"
+                                  step="any"
+                                  placeholder="Valor medido"
+                                  value={exec?.numberValue ?? ""}
+                                  onChange={(e) => updateExec(action.id, { numberValue: e.target.value })}
+                                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                                />
+                                <select
+                                  value={exec?.unit ?? ""}
+                                  onChange={(e) => updateExec(action.id, { unit: e.target.value })}
+                                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 bg-white"
+                                >
+                                  <option value="">Unidade</option>
+                                  {action.units.map((u) => <option key={u} value={u}>{u}</option>)}
+                                </select>
+                              </div>
+                            ) : (
+                              <div className="text-sm font-semibold text-blue-700 bg-blue-50 px-3 py-2 rounded-lg inline-block">
+                                {exec?.numberValue !== undefined ? `${exec.numberValue} ${exec.unit ?? ""}` : "Não preenchido"}
+                              </div>
+                            )}
+                            {/* Status/Boolean field */}
+                            {action.type === "NUMBER_TEXT" && (
+                              !isReadOnly ? (
+                                <div className="flex gap-2">
+                                  {([
+                                    { value: "DONE", label: "Realizado", icon: <CheckCircle2 className="w-4 h-4" />, active: "border-green-500 bg-green-50 text-green-700" },
+                                    { value: "NOT_DONE", label: "Não Realizado", icon: <XCircle className="w-4 h-4" />, active: "border-red-500 bg-red-50 text-red-700" },
+                                    { value: "NOT_APPLICABLE", label: "N/A", icon: <MinusCircle className="w-4 h-4" />, active: "border-gray-400 bg-gray-100 text-gray-600" },
+                                  ] as { value: ActionStatus; label: string; icon: React.ReactNode; active: string }[]).map((opt) => (
+                                    <button
+                                      key={opt.value}
+                                      type="button"
+                                      onClick={() => updateExec(action.id, { status: opt.value })}
+                                      className={cn(
+                                        "flex-1 flex items-center justify-center gap-1 py-2 rounded-lg border-2 text-xs font-medium transition-all",
+                                        exec?.status === opt.value ? opt.active : "border-gray-200 text-gray-400 bg-white"
+                                      )}
+                                    >
+                                      {opt.icon}
+                                      <span className="hidden sm:inline">{opt.label}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              ) : (
+                                <ReadOnlyStatus status={exec?.status} />
+                              )
+                            )}
+                            {action.type === "NUMBER_BOOLEAN" && (
+                              !isReadOnly ? (
+                                <div className="flex gap-3">
+                                  <button type="button" onClick={() => updateExec(action.id, { booleanValue: true })}
+                                    className={cn("flex-1 py-2.5 rounded-lg border-2 text-sm font-semibold transition-all", exec?.booleanValue === true ? "border-green-500 bg-green-50 text-green-700" : "border-gray-200 text-gray-400 bg-white")}
+                                  >✓ Sim</button>
+                                  <button type="button" onClick={() => updateExec(action.id, { booleanValue: false })}
+                                    className={cn("flex-1 py-2.5 rounded-lg border-2 text-sm font-semibold transition-all", exec?.booleanValue === false ? "border-red-500 bg-red-50 text-red-700" : "border-gray-200 text-gray-400 bg-white")}
+                                  >✗ Não</button>
+                                </div>
+                              ) : (
+                                <div className={cn("text-sm font-semibold px-3 py-2 rounded-lg inline-block", exec?.booleanValue === true && "bg-green-50 text-green-700", exec?.booleanValue === false && "bg-red-50 text-red-700", exec?.booleanValue === undefined && "bg-gray-50 text-gray-400")}>
+                                  {exec?.booleanValue === true ? "✓ Sim" : exec?.booleanValue === false ? "✗ Não" : "Não preenchido"}
+                                </div>
+                              )
+                            )}
+                          </div>
                         )}
 
                         {/* Photos */}
