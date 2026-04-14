@@ -10,6 +10,7 @@ interface ExecutionInput {
   unit: string | null;
   booleanValue: boolean | null;
   observation?: string | null;
+  outOfSpec?: boolean;
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -43,6 +44,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           unit: exec.unit ?? null,
           booleanValue: exec.booleanValue ?? null,
           observation: exec.observation ?? null,
+          outOfSpec: exec.outOfSpec ?? false,
         },
         update: {
           status: exec.status ?? null,
@@ -50,6 +52,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           unit: exec.unit ?? null,
           booleanValue: exec.booleanValue ?? null,
           observation: exec.observation ?? null,
+          outOfSpec: exec.outOfSpec ?? false,
         },
       })
     )

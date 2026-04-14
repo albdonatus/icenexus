@@ -232,6 +232,7 @@ model ActionExecution {
   unit           String?
   booleanValue   Boolean?
   observation    String?
+  outOfSpec      Boolean       @default(false)
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 

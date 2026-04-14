@@ -109,6 +109,7 @@ const styles = StyleSheet.create({
   statusNA: { color: "#9ca3af" },
   photoRow: { flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 4 },
   photo: { width: 64, height: 64, borderRadius: 3, objectFit: "cover" },
+  outOfSpecBadge: { fontSize: 8, color: "#ea580c", backgroundColor: "#fff7ed", borderWidth: 1, borderColor: "#fed7aa", borderRadius: 4, paddingHorizontal: 5, paddingVertical: 2, marginTop: 3, alignSelf: "flex-start" },
   footer: {
     marginTop: 20,
     paddingTop: 10,
@@ -170,6 +171,7 @@ interface PdfOrderData {
     unit: string | null;
     booleanValue: boolean | null;
     observation: string | null;
+    outOfSpec: boolean;
     photos: { id: string; url: string }[];
   }[];
 }
@@ -337,6 +339,9 @@ function OrderDocument({ order }: { order: PdfOrderData }) {
                       <Text style={styles.actionDescription}>{action.description}</Text>
                       {valueText && action.type !== "TEXT" && (
                         <Text style={[styles.actionObservation, { color: "#374151" }]}>{valueText}</Text>
+                      )}
+                      {exec?.outOfSpec && (
+                        <Text style={styles.outOfSpecBadge}>⚠ Fora de especificação</Text>
                       )}
                       {exec?.observation && (
                         <Text style={styles.actionObservation}>Obs: {exec.observation}</Text>

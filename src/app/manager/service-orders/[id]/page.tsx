@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Download, CheckCircle2, XCircle, MinusCircle, Pencil } from "lucide-react";
+import { ArrowLeft, Download, CheckCircle2, XCircle, MinusCircle, Pencil, AlertTriangle } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Card, { CardContent, CardHeader } from "@/components/ui/Card";
 import { OrderStatusBadge } from "@/components/ui/Badge";
@@ -165,6 +165,12 @@ export default async function ServiceOrderDetailPage({ params }: { params: Promi
                         <div className="flex-shrink-0 mt-0.5">{icon}</div>
                         <div className="flex-1">
                           <p className="text-sm text-gray-800">{action.description}</p>
+                          {(exec as { outOfSpec?: boolean } | undefined)?.outOfSpec && (
+                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-orange-600 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-full mt-1">
+                              <AlertTriangle className="w-3 h-3" />
+                              Fora de especificação
+                            </span>
+                          )}
                           {exec?.observation && (
                             <p className="text-xs text-gray-400 mt-0.5 italic">{exec.observation}</p>
                           )}

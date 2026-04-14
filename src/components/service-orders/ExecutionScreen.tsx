@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   CheckCircle2, XCircle, MinusCircle, ChevronDown, ChevronUp,
-  Camera, Trash2, Loader2, Info, Paperclip, FileText, Package,
+  Camera, Trash2, Loader2, Info, Paperclip, FileText, Package, AlertTriangle,
 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
@@ -58,6 +58,7 @@ interface ExecutionState {
   unit?: string;
   booleanValue?: boolean;
   observation: string;
+  outOfSpec?: boolean;
 }
 
 interface Photo {
@@ -141,6 +142,7 @@ export default function ExecutionScreen({
       unit: exec.unit ?? null,
       booleanValue: exec.booleanValue ?? null,
       observation: exec.observation || null,
+      outOfSpec: exec.outOfSpec ?? false,
     }));
   }
 
@@ -638,9 +640,25 @@ export default function ExecutionScreen({
                           </div>
                         )}
 
-                        {/* Observation */}
+                        {/* Out of spec + Observation */}
                         {!isReadOnly && isFilled && (
-                          <div className="mt-2">
+                          <div className="mt-2 space-y-2">
+                            {/* Out of spec toggle */}
+                            <button
+                              type="button"
+                              onClick={() => updateExec(action.id, { outOfSpec: !exec?.outOfSpec })}
+                              className={cn(
+                                "inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border font-medium transition-all",
+                                exec?.outOfSpec
+                                  ? "bg-orange-500 text-white border-orange-500"
+                                  : "bg-white text-gray-400 border-gray-200 hover:border-orange-400 hover:text-orange-500"
+                              )}
+                            >
+                              <AlertTriangle className="w-3.5 h-3.5" />
+                              Fora de especificação
+                            </button>
+
+                            {/* Observation */}
                             {obsOpen ? (
                               <textarea
                                 className="w-full text-xs text-gray-700 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400 resize-none"
@@ -653,7 +671,7 @@ export default function ExecutionScreen({
                               <button
                                 type="button"
                                 onClick={() => toggleObs(action.id)}
-                                className="text-xs text-gray-400 hover:text-blue-500"
+                                className="text-xs text-gray-400 hover:text-blue-500 block"
                               >
                                 {exec?.observation ? `Obs: ${exec.observation}` : "+ Adicionar observação"}
                               </button>
@@ -661,8 +679,18 @@ export default function ExecutionScreen({
                           </div>
                         )}
 
-                        {isReadOnly && exec?.observation && (
-                          <p className="text-xs text-gray-400 mt-1.5 italic">{exec.observation}</p>
+                        {isReadOnly && (
+                          <div className="mt-1.5 space-y-1">
+                            {exec?.outOfSpec && (
+                              <span className="inline-flex items-center gap-1 text-xs font-semibold text-orange-600 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-full">
+                                <AlertTriangle className="w-3 h-3" />
+                                Fora de especificação
+                              </span>
+                            )}
+                            {exec?.observation && (
+                              <p className="text-xs text-gray-400 italic">{exec.observation}</p>
+                            )}
+                          </div>
                         )}
                       </div>
                     );
