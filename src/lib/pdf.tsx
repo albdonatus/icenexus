@@ -149,6 +149,7 @@ interface PdfOrderData {
   completedAt: Date | null;
   notes: string | null;
   status: string;
+  companyLogo?: string | null;
   client: { name: string; document?: string | null; email?: string | null; phone?: string | null };
   equipment: { name: string; type: string; brand?: string | null; model?: string | null; serialNumber?: string | null };
   technician: { name: string };
@@ -184,7 +185,11 @@ function OrderDocument({ order }: { order: PdfOrderData }) {
       <Page size="A4" style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>ICE NEXUS</Text>
+          {order.companyLogo ? (
+            <Image src={order.companyLogo} style={{ height: 44, maxWidth: 180, objectFit: "contain", marginBottom: 6 }} />
+          ) : (
+            <Text style={styles.title}>ICE NEXUS</Text>
+          )}
           <Text style={styles.subtitle}>Relatório de Ordem de Serviço</Text>
         </View>
 
@@ -327,6 +332,19 @@ function OrderDocument({ order }: { order: PdfOrderData }) {
                   iconText = exec?.booleanValue === true ? "✓" : exec?.booleanValue === false ? "✗" : "—";
                   iconStyle = exec?.booleanValue === true ? styles.statusDone : exec?.booleanValue === false ? styles.statusNotDone : styles.statusNA;
                   valueText = `${num} · ${bl}`;
+                } else if (action.type === "TEXT_BOOLEAN") {
+                  const st = exec?.status ? textStatusLabel(exec.status) : "—";
+                  const bl = exec?.booleanValue === true ? "Sim" : exec?.booleanValue === false ? "Não" : "—";
+                  iconText = exec?.status ? textStatusIcon(exec.status) : "—";
+                  iconStyle = exec?.status ? textStatusStyle(exec.status) : styles.statusNA;
+                  valueText = `${st} · ${bl}`;
+                } else if (action.type === "NUMBER_TEXT_BOOLEAN") {
+                  const num = exec?.numberValue != null ? `${exec.numberValue} ${exec.unit ?? ""}` : "—";
+                  const st = exec?.status ? textStatusLabel(exec.status) : "—";
+                  const bl = exec?.booleanValue === true ? "Sim" : exec?.booleanValue === false ? "Não" : "—";
+                  iconText = exec?.status ? textStatusIcon(exec.status) : "—";
+                  iconStyle = exec?.status ? textStatusStyle(exec.status) : styles.statusNA;
+                  valueText = `${num} · ${st} · ${bl}`;
                 }
 
                 return (
@@ -337,7 +355,7 @@ function OrderDocument({ order }: { order: PdfOrderData }) {
                     <Text style={[styles.actionStatus, iconStyle]}>{iconText}</Text>
                     <View style={styles.actionContent}>
                       <Text style={styles.actionDescription}>{action.description}</Text>
-                      {valueText && action.type !== "TEXT" && (
+                      {valueText && action.type !== "TEXT" && action.type !== "TEXT_BOOLEAN" && (
                         <Text style={[styles.actionObservation, { color: "#374151" }]}>{valueText}</Text>
                       )}
                       {exec?.outOfSpec && (
@@ -354,7 +372,7 @@ function OrderDocument({ order }: { order: PdfOrderData }) {
                         </View>
                       )}
                     </View>
-                    {action.type === "TEXT" && valueText && (
+                    {(action.type === "TEXT" || action.type === "TEXT_BOOLEAN") && valueText && (
                       <Text style={[styles.actionObservation, { marginLeft: 8, marginTop: 0 }]}>{valueText}</Text>
                     )}
                   </View>

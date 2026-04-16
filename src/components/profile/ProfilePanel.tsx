@@ -3,13 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { X, Camera, Loader2, Eye, EyeOff, Check } from "lucide-react";
+import { X, Camera, Loader2, Eye, EyeOff, Check, ImagePlus, Trash2 } from "lucide-react";
 
 interface ProfileData {
   name: string;
   email: string;
   phone: string;
   image: string | null;
+  companyLogo: string | null;
 }
 
 interface Props {
@@ -20,11 +21,14 @@ interface Props {
 export default function ProfilePanel({ open, onClose }: Props) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
+  const logoRef = useRef<HTMLInputElement>(null);
 
-  const [data, setData] = useState<ProfileData>({ name: "", email: "", phone: "", image: null });
+  const [data, setData] = useState<ProfileData>({ name: "", email: "", phone: "", image: null, companyLogo: null });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [removingLogo, setRemovingLogo] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
@@ -41,7 +45,7 @@ export default function ProfilePanel({ open, onClose }: Props) {
     setSuccess(false);
     fetch("/api/profile")
       .then((r) => r.json())
-      .then((d) => setData({ name: d.name ?? "", email: d.email ?? "", phone: d.phone ?? "", image: d.image }))
+      .then((d) => setData({ name: d.name ?? "", email: d.email ?? "", phone: d.phone ?? "", image: d.image, companyLogo: d.companyLogo ?? null }))
       .finally(() => setLoading(false));
   }, [open]);
 
@@ -65,6 +69,35 @@ export default function ProfilePanel({ open, onClose }: Props) {
     } else {
       setError(json.error ?? "Erro ao enviar foto");
     }
+  }
+
+  async function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const preview = URL.createObjectURL(file);
+    setData((d) => ({ ...d, companyLogo: preview }));
+    setUploadingLogo(true);
+
+    const form = new FormData();
+    form.append("logo", file);
+    const res = await fetch("/api/profile/logo", { method: "POST", body: form });
+    const json = await res.json();
+    setUploadingLogo(false);
+
+    if (res.ok) {
+      setData((d) => ({ ...d, companyLogo: json.companyLogo }));
+    } else {
+      setError(json.error ?? "Erro ao enviar logo");
+      setData((d) => ({ ...d, companyLogo: null }));
+    }
+  }
+
+  async function handleRemoveLogo() {
+    setRemovingLogo(true);
+    await fetch("/api/profile/logo", { method: "DELETE" });
+    setRemovingLogo(false);
+    setData((d) => ({ ...d, companyLogo: null }));
   }
 
   async function handleSave() {
@@ -177,6 +210,57 @@ export default function ProfilePanel({ open, onClose }: Props) {
                 onChange={handleAvatarChange}
               />
               <p className="text-[11px] text-gray-400">Clique na câmera para alterar a foto</p>
+            </div>
+
+            {/* Logo da empresa */}
+            <div className="space-y-2">
+              <h3 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Logo da Empresa</h3>
+              <p className="text-[11px] text-gray-400">Aparece no cabeçalho do relatório PDF das OS</p>
+
+              <div
+                className="relative w-full h-20 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden cursor-pointer hover:border-violet-300 hover:bg-violet-50/30 transition-colors group"
+                onClick={() => logoRef.current?.click()}
+              >
+                {data.companyLogo ? (
+                  <Image
+                    src={data.companyLogo}
+                    alt="Logo"
+                    fill
+                    className="object-contain p-2"
+                    unoptimized
+                  />
+                ) : (
+                  <div className="flex flex-col items-center gap-1 text-gray-400 group-hover:text-violet-400 transition-colors">
+                    <ImagePlus className="w-5 h-5" />
+                    <span className="text-[11px]">Clique para enviar</span>
+                  </div>
+                )}
+                {uploadingLogo && (
+                  <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
+                    <Loader2 className="w-5 h-5 animate-spin text-violet-500" />
+                  </div>
+                )}
+              </div>
+
+              <input
+                ref={logoRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={handleLogoChange}
+              />
+
+              {data.companyLogo && (
+                <button
+                  type="button"
+                  onClick={handleRemoveLogo}
+                  disabled={removingLogo}
+                  className="flex items-center gap-1.5 text-[11px] text-red-400 hover:text-red-600 transition-colors disabled:opacity-50"
+                >
+                  {removingLogo ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                  Remover logo
+                </button>
+              )}
             </div>
 
             {/* Dados pessoais */}

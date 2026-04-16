@@ -38,6 +38,8 @@ enum ActionType {
   BOOLEAN
   NUMBER_TEXT
   NUMBER_BOOLEAN
+  TEXT_BOOLEAN
+  NUMBER_TEXT_BOOLEAN
 }
 
 model User {
@@ -48,9 +50,11 @@ model User {
   passwordHash String
   role         Role
   active       Boolean  @default(true)
-  phone        String?
-  image        String?
-  createdAt    DateTime @default(now())
+  phone           String?
+  image           String?
+  companyLogo     String?
+  pendingApproval Boolean  @default(false)
+  createdAt       DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   serviceOrders ServiceOrder[] @relation("TechnicianOrders")
@@ -210,6 +214,7 @@ model ServiceOrder {
   completedAt       DateTime?
   recurrence        RecurrenceType?
   recurrenceGroupId String?
+  recurrencesLeft   Int?
   shareToken        String?            @unique
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt

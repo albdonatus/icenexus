@@ -3,9 +3,8 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, UserPlus, Pencil, ToggleLeft, ToggleRight, Building2 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { formatDate } from "@/lib/utils";
+import { Search, UserPlus, Pencil, ToggleLeft, ToggleRight, Building2, Clock, CheckCircle2, Loader2 } from "lucide-react";
+import { cn, formatDate } from "@/lib/utils";
 
 type UserRow = {
   id: string;
@@ -13,6 +12,7 @@ type UserRow = {
   email: string;
   role: string;
   active: boolean;
+  pendingApproval: boolean;
   companyId: string | null;
   companyName: string;
   phone: string | null;
@@ -37,9 +37,13 @@ export default function AdminUsersClient({ users }: { users: UserRow[] }) {
   const [roleFilter, setRoleFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [toggling, setToggling] = useState<string | null>(null);
+  const [approving, setApproving] = useState<string | null>(null);
+
+  const pending = useMemo(() => users.filter((u) => u.pendingApproval && !u.active), [users]);
 
   const filtered = useMemo(() => {
     return users.filter((u) => {
+      if (u.pendingApproval && !u.active) return false; // shown separately above
       const matchSearch =
         u.name.toLowerCase().includes(search.toLowerCase()) ||
         u.email.toLowerCase().includes(search.toLowerCase()) ||
@@ -63,6 +67,13 @@ export default function AdminUsersClient({ users }: { users: UserRow[] }) {
     router.refresh();
   }
 
+  async function approveUser(userId: string) {
+    setApproving(userId);
+    await fetch(`/api/admin/users/${userId}/approve`, { method: "POST" });
+    setApproving(null);
+    router.refresh();
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -78,6 +89,50 @@ export default function AdminUsersClient({ users }: { users: UserRow[] }) {
           Novo usuário
         </Link>
       </div>
+
+      {/* ── Pending approvals ── */}
+      {pending.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <Clock className="w-4 h-4 text-amber-500" />
+            <h2 className="text-sm font-semibold text-gray-700">Aguardando aprovação</h2>
+            <span className="text-xs font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">{pending.length}</span>
+          </div>
+          <div className="space-y-2">
+            {pending.map((user) => (
+              <div
+                key={user.id}
+                className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center justify-between gap-4"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-900 text-sm">{user.name}</p>
+                  <p className="text-xs text-gray-500">{user.email}</p>
+                  {user.phone && <p className="text-xs text-gray-400">{user.phone}</p>}
+                  <p className="text-[11px] text-gray-400 mt-0.5">Cadastrou em {formatDate(new Date(user.createdAt))}</p>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => approveUser(user.id)}
+                    disabled={approving === user.id}
+                    className="flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors disabled:opacity-60"
+                  >
+                    {approving === user.id
+                      ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      : <CheckCircle2 className="w-3.5 h-3.5" />}
+                    Aprovar
+                  </button>
+                  <Link
+                    href={`/admin/users/${user.id}`}
+                    className="text-gray-400 hover:text-violet-600 transition-colors p-1"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-5">
@@ -182,7 +237,7 @@ export default function AdminUsersClient({ users }: { users: UserRow[] }) {
         </div>
       </div>
 
-      <p className="text-xs text-gray-400 mt-3">{filtered.length} de {users.length} usuários</p>
+      <p className="text-xs text-gray-400 mt-3">{filtered.length} de {users.length - pending.length} usuários</p>
     </div>
   );
 }

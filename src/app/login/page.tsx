@@ -24,6 +24,15 @@ export default function LoginPage() {
     setLoading(false);
 
     if (result?.error) {
+      // Check if the account exists but is pending approval
+      try {
+        const check = await fetch(`/api/auth/check-pending?email=${encodeURIComponent(email)}`);
+        const data = await check.json();
+        if (data.pending) {
+          setError("Sua conta ainda não foi aprovada. Você receberá um e-mail quando o acesso for liberado.");
+          return;
+        }
+      } catch { /* ignore */ }
       setError("Email ou senha incorretos");
       return;
     }

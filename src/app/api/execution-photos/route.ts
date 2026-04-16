@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { put } from "@vercel/blob";
+import sharp from "sharp";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -38,9 +39,12 @@ export async function POST(req: NextRequest) {
     update: {},
   });
 
-  const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-  const filename = `execution-photos/exec-${execution.id}-${Date.now()}.${ext}`;
-  const blob = await put(filename, file, { access: "public", token: process.env.blob_READ_WRITE_TOKEN });
+  // Auto-rotate based on EXIF orientation so PDFs render correctly
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const rotated = await sharp(buffer).rotate().jpeg({ quality: 85 }).toBuffer();
+
+  const filename = `execution-photos/exec-${execution.id}-${Date.now()}.jpg`;
+  const blob = await put(filename, rotated, { access: "public", contentType: "image/jpeg", token: process.env.blob_READ_WRITE_TOKEN });
 
   const photo = await prisma.executionPhoto.create({
     data: { executionId: execution.id, url: blob.url },

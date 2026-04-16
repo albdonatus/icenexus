@@ -29,6 +29,7 @@ export default function NewServiceOrderPage() {
     scheduledDate: "",
     notes: "",
     recurrence: "",
+    recurrencesLeft: "",
   });
 
   useEffect(() => { markDirty(); }, []);
@@ -144,9 +145,24 @@ export default function NewServiceOrderPage() {
                 ))}
               </div>
               {form.recurrence && (
-                <p className="text-xs text-violet-600 mt-1.5">
-                  ✓ A próxima OS será criada automaticamente ao concluir esta.
-                </p>
+                <div className="mt-3 space-y-2">
+                  <div className="flex items-center gap-3">
+                    <label className="text-sm text-gray-600 whitespace-nowrap">Número de recorrências</label>
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="Ilimitado"
+                      value={form.recurrencesLeft}
+                      onChange={(e) => update("recurrencesLeft", e.target.value)}
+                      className="w-32 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-violet-400"
+                    />
+                  </div>
+                  <p className="text-xs text-violet-600">
+                    {form.recurrencesLeft
+                      ? `✓ Serão criadas ${form.recurrencesLeft} OS no total (incluindo esta).`
+                      : "✓ A próxima OS será criada automaticamente ao concluir — sem limite."}
+                  </p>
+                </div>
               )}
             </div>
 

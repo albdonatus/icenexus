@@ -33,9 +33,12 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     data: { status: "COMPLETED", completedAt: new Date() },
   });
 
-  // Auto-create next occurrence if recurring
-  if (order.recurrence && order.recurrenceGroupId) {
-    const next = nextDate(order.scheduledDate, order.recurrence);
+  // Auto-create next occurrence if recurring and count allows
+  const hasMore = order.recurrence && order.recurrenceGroupId &&
+    (order.recurrencesLeft === null || order.recurrencesLeft > 1);
+
+  if (hasMore) {
+    const next = nextDate(order.scheduledDate, order.recurrence!);
     await prisma.serviceOrder.create({
       data: {
         companyId: order.companyId,
@@ -47,6 +50,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
         scheduledDate: next,
         recurrence: order.recurrence,
         recurrenceGroupId: order.recurrenceGroupId,
+        recurrencesLeft: order.recurrencesLeft !== null ? order.recurrencesLeft - 1 : null,
       },
     });
   }

@@ -18,6 +18,7 @@ import {
   UserCircle,
   FileText,
   Radio,
+  LineChart,
 } from "lucide-react";
 import ProfilePanel from "@/components/profile/ProfilePanel";
 
@@ -28,6 +29,7 @@ const navItems = [
   { href: "/manager/technicians", label: "Equipe", icon: UserCog },
   { href: "/manager/equipment", label: "Equipamentos", icon: Wrench },
   { href: "/manager/checklists", label: "Checklists", icon: Snowflake },
+  { href: "/manager/measurements", label: "Medições", icon: LineChart },
 ];
 
 interface SidebarProps {

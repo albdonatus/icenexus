@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { sendPendingApprovalToAdmins } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -21,22 +22,33 @@ export async function POST(req: NextRequest) {
 
   const passwordHash = await bcrypt.hash(password, 12);
 
-  // Create manager — companyId = own id (self as tenant root)
-  const user = await prisma.user.create({
-    data: {
-      name,
-      email,
-      phone: phone || null,
-      passwordHash,
-      role: "MANAGER",
-    },
+  // Create manager — inactive until approved by SUPERADMIN
+  // companyId must equal user.id (self as tenant root), so we use a transaction
+  const user = await prisma.$transaction(async (tx) => {
+    const u = await tx.user.create({
+      data: {
+        name,
+        email,
+        phone: phone || null,
+        passwordHash,
+        role: "MANAGER",
+        active: false,
+        pendingApproval: true,
+      },
+    });
+    return tx.user.update({ where: { id: u.id }, data: { companyId: u.id } });
   });
 
-  // Set companyId = user.id now that we have the id
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { companyId: user.id },
+  // Notify all SUPERADMIN users by email
+  const admins = await prisma.user.findMany({
+    where: { role: "SUPERADMIN", active: true },
+    select: { email: true },
   });
 
-  return NextResponse.json({ success: true }, { status: 201 });
+  await sendPendingApprovalToAdmins(
+    admins.map((a) => a.email),
+    { name, email }
+  ).catch((err) => console.error("[register] Failed to send admin email:", err));
+
+  return NextResponse.json({ pending: true }, { status: 201 });
 }

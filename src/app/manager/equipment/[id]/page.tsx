@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft, Pencil, Plus, Trash2, ChevronDown, ChevronUp,
-  Check, X, QrCode, Paperclip, FileText, Loader2,
+  Check, X, QrCode, Paperclip, FileText, Loader2, Copy,
 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -84,6 +84,26 @@ export default function EquipmentDetailPage() {
 
   function removeComponent(cid: string) {
     setComponents((prev) => prev.filter((c) => c.id !== cid));
+  }
+
+  function duplicateComponent(cid: string) {
+    setComponents((prev) => {
+      const idx = prev.findIndex((c) => c.id === cid);
+      if (idx === -1) return prev;
+      const source = prev[idx];
+      const copy: EquipComp = {
+        id: genId(),
+        name: `${source.name} (cópia)`,
+        order: source.order,
+        items: source.items.map((item) => ({ ...item, id: genId() })),
+        open: true,
+        attachments: [],
+        pendingFiles: [],
+      };
+      const next = [...prev];
+      next.splice(idx + 1, 0, copy);
+      return next;
+    });
   }
 
   function toggleComponent(cid: string) {
@@ -353,13 +373,23 @@ export default function EquipmentDetailPage() {
                       {comp.open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                     </button>
                     {editing && (
-                      <button
-                        type="button"
-                        onClick={() => removeComponent(comp.id)}
-                        className="p-1 text-gray-300 hover:text-red-500"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => duplicateComponent(comp.id)}
+                          className="p-1 text-gray-300 hover:text-violet-500"
+                          title="Duplicar grupo"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeComponent(comp.id)}
+                          className="p-1 text-gray-300 hover:text-red-500"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </>
                     )}
                   </div>
 

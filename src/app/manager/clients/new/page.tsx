@@ -7,6 +7,7 @@ import { ArrowLeft } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Card, { CardContent, CardHeader } from "@/components/ui/Card";
+import { useDocumentField, DocHint } from "@/hooks/useDocumentField";
 
 export default function NewClientPage() {
   const router = useRouter();
@@ -20,13 +21,28 @@ export default function NewClientPage() {
     address: "",
   });
 
+  const { docState, docMessage, handleDocumentChange: handleDoc } = useDocumentField(
+    (fields) => setForm((f) => ({
+      ...f,
+      name: fields.name || f.name,
+      email: fields.email || f.email,
+      phone: fields.phone || f.phone,
+      address: fields.address || f.address,
+    }))
+  );
+
   function update(field: string, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
+  }
+
+  function handleDocumentChange(raw: string) {
+    handleDoc(raw, (masked) => update("document", masked));
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.name) { setError("Nome é obrigatório"); return; }
+    if (docState === "invalid") { setError("CPF inválido"); return; }
     setLoading(true);
     setError("");
 
@@ -45,6 +61,7 @@ export default function NewClientPage() {
 
     router.push("/manager/clients");
   }
+
 
   return (
     <div className="max-w-2xl">
@@ -73,12 +90,15 @@ export default function NewClientPage() {
               onChange={(e) => update("name", e.target.value)}
               required
             />
-            <Input
-              label="CNPJ / CPF"
-              placeholder="00.000.000/0000-00"
-              value={form.document}
-              onChange={(e) => update("document", e.target.value)}
-            />
+            <div>
+              <Input
+                label="CNPJ / CPF"
+                placeholder="00.000.000/0000-00 ou 000.000.000-00"
+                value={form.document}
+                onChange={(e) => handleDocumentChange(e.target.value)}
+              />
+              <DocHint state={docState} message={docMessage} />
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <Input
                 label="Telefone"

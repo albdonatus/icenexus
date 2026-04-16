@@ -18,6 +18,7 @@ export default async function AdminUsersPage() {
       email: true,
       role: true,
       active: true,
+      pendingApproval: true,
       companyId: true,
       phone: true,
       createdAt: true,

@@ -25,7 +25,17 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ tok
 
   if (!order) return NextResponse.json({ error: "Relatório não encontrado" }, { status: 404 });
 
-  const pdfBuffer = await generateOrderPdf(order);
+  // Busca a logo da empresa pelo companyId da OS
+  let companyLogo: string | null = null;
+  if (order.companyId) {
+    const manager = await prisma.user.findFirst({
+      where: { companyId: order.companyId, role: "MANAGER" },
+      select: { companyLogo: true },
+    });
+    companyLogo = manager?.companyLogo ?? null;
+  }
+
+  const pdfBuffer = await generateOrderPdf({ ...order, companyLogo });
 
   return new NextResponse(pdfBuffer as unknown as BodyInit, {
     headers: {

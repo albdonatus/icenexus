@@ -7,6 +7,7 @@ import { ArrowLeft } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Card, { CardContent, CardHeader } from "@/components/ui/Card";
+import { useDocumentField, DocHint } from "@/hooks/useDocumentField";
 
 export default function EditClientPage() {
   const router = useRouter();
@@ -16,6 +17,16 @@ export default function EditClientPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState({ name: "", document: "", email: "", phone: "", address: "" });
+
+  const { docState, docMessage, handleDocumentChange: handleDoc } = useDocumentField(
+    (fields) => setForm((f) => ({
+      ...f,
+      name: fields.name || f.name,
+      email: fields.email || f.email,
+      phone: fields.phone || f.phone,
+      address: fields.address || f.address,
+    }))
+  );
 
   useEffect(() => {
     fetch(`/api/clients/${id}`)
@@ -35,8 +46,13 @@ export default function EditClientPage() {
     setForm((f) => ({ ...f, [field]: value }));
   }
 
+  function handleDocumentChange(raw: string) {
+    handleDoc(raw, (masked) => update("document", masked));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (docState === "invalid") { setError("CPF inválido"); return; }
     setLoading(true);
     setError("");
     const res = await fetch(`/api/clients/${id}`, {
@@ -47,6 +63,7 @@ export default function EditClientPage() {
     if (!res.ok) { setError("Erro ao salvar"); setLoading(false); return; }
     router.push(`/manager/clients/${id}`);
   }
+
 
   return (
     <div className="max-w-2xl">
@@ -62,7 +79,15 @@ export default function EditClientPage() {
           {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 mb-4">{error}</div>}
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input label="Nome *" value={form.name} onChange={(e) => update("name", e.target.value)} required />
-            <Input label="CNPJ / CPF" value={form.document} onChange={(e) => update("document", e.target.value)} />
+            <div>
+              <Input
+                label="CNPJ / CPF"
+                placeholder="00.000.000/0000-00 ou 000.000.000-00"
+                value={form.document}
+                onChange={(e) => handleDocumentChange(e.target.value)}
+              />
+              <DocHint state={docState} message={docMessage} />
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <Input label="Telefone" value={form.phone} onChange={(e) => update("phone", e.target.value)} />
               <Input label="Email" type="email" value={form.email} onChange={(e) => update("email", e.target.value)} />

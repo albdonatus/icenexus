@@ -10,7 +10,7 @@ import Input from "@/components/ui/Input";
 import Card, { CardContent, CardHeader } from "@/components/ui/Card";
 import { UNIT_GROUPS } from "@/lib/units";
 
-type ActionType = "TEXT" | "NUMBER" | "BOOLEAN" | "NUMBER_TEXT" | "NUMBER_BOOLEAN";
+type ActionType = "TEXT" | "NUMBER" | "BOOLEAN" | "NUMBER_TEXT" | "NUMBER_BOOLEAN" | "TEXT_BOOLEAN" | "NUMBER_TEXT_BOOLEAN";
 
 interface ExistingAttachment {
   id: string;
@@ -68,6 +68,8 @@ const ACTION_TYPE_LABELS: Record<ActionType, string> = {
   BOOLEAN: "Troca / Confirmação",
   NUMBER_TEXT: "Medição + Verificação",
   NUMBER_BOOLEAN: "Medição + Troca",
+  TEXT_BOOLEAN: "Verificação + Troca",
+  NUMBER_TEXT_BOOLEAN: "Medição + Verificação + Troca",
 };
 
 const ACTION_TYPE_COLORS: Record<ActionType, string> = {
@@ -76,19 +78,22 @@ const ACTION_TYPE_COLORS: Record<ActionType, string> = {
   BOOLEAN: "bg-green-100 text-green-700",
   NUMBER_TEXT: "bg-blue-100 text-blue-700",
   NUMBER_BOOLEAN: "bg-blue-100 text-blue-700",
+  TEXT_BOOLEAN: "bg-gray-100 text-gray-700",
+  NUMBER_TEXT_BOOLEAN: "bg-blue-100 text-blue-700",
 };
 
-// Helpers to decompose/compose types
-function hasNumber(type: ActionType) { return type === "NUMBER" || type === "NUMBER_TEXT" || type === "NUMBER_BOOLEAN"; }
-function hasStatus(type: ActionType) { return type === "TEXT" || type === "NUMBER_TEXT"; }
-function hasBoolean(type: ActionType) { return type === "BOOLEAN" || type === "NUMBER_BOOLEAN"; }
+// Helpers to decompose types — each dimension is independent
+function hasNumber(type: ActionType) { return type === "NUMBER" || type === "NUMBER_TEXT" || type === "NUMBER_BOOLEAN" || type === "NUMBER_TEXT_BOOLEAN"; }
+function hasStatus(type: ActionType) { return type === "TEXT" || type === "NUMBER_TEXT" || type === "TEXT_BOOLEAN" || type === "NUMBER_TEXT_BOOLEAN"; }
+function hasBoolean(type: ActionType) { return type === "BOOLEAN" || type === "NUMBER_BOOLEAN" || type === "TEXT_BOOLEAN" || type === "NUMBER_TEXT_BOOLEAN"; }
 
-function buildType(wantNumber: boolean, statusType: "TEXT" | "BOOLEAN" | null): ActionType {
-  if (wantNumber && statusType === "TEXT") return "NUMBER_TEXT";
-  if (wantNumber && statusType === "BOOLEAN") return "NUMBER_BOOLEAN";
+function buildType(wantNumber: boolean, wantText: boolean, wantBoolean: boolean): ActionType {
+  if (wantNumber && wantText && wantBoolean) return "NUMBER_TEXT_BOOLEAN";
+  if (wantNumber && wantText) return "NUMBER_TEXT";
+  if (wantNumber && wantBoolean) return "NUMBER_BOOLEAN";
   if (wantNumber) return "NUMBER";
-  if (statusType === "TEXT") return "TEXT";
-  if (statusType === "BOOLEAN") return "BOOLEAN";
+  if (wantText && wantBoolean) return "TEXT_BOOLEAN";
+  if (wantBoolean) return "BOOLEAN";
   return "TEXT";
 }
 
@@ -428,13 +433,13 @@ export default function ChecklistTemplateBuilder({ initialData, mode }: Checklis
       </div>
 
       {/* Legend */}
-      <div className="flex gap-3 mb-4 text-xs">
-        {(["TEXT", "NUMBER", "BOOLEAN"] as ActionType[]).map((type) => (
+      <div className="flex flex-wrap gap-2 mb-4 text-xs">
+        {(["TEXT", "BOOLEAN", "NUMBER"] as ActionType[]).map((type) => (
           <span key={type} className={`px-2 py-1 rounded-full font-medium ${ACTION_TYPE_COLORS[type]}`}>
             {ACTION_TYPE_LABELS[type]}
           </span>
         ))}
-        <span className="text-gray-400 self-center">· Medição pode ser combinada com os demais</span>
+        <span className="text-gray-400 self-center">· Cada tipo é um toggle independente, combináveis entre si</span>
       </div>
 
       {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 mb-4">{error}</div>}
@@ -511,35 +516,29 @@ export default function ChecklistTemplateBuilder({ initialData, mode }: Checklis
                       </button>
                     </div>
 
-                    {/* Type selector */}
+                    {/* Type selector — all three toggles are independent */}
                     <div className="ml-7 flex flex-wrap items-center gap-2">
-                      {/* Status group — mutually exclusive */}
-                      {(["TEXT", "BOOLEAN"] as const).map((st) => {
-                        const active = hasStatus(action.type) && st === "TEXT" || hasBoolean(action.type) && st === "BOOLEAN";
-                        return (
-                          <button
-                            key={st}
-                            type="button"
-                            onClick={() => {
-                              const currentStatus = active ? null : st;
-                              updateAction(comp.id, action.id, "type", buildType(hasNumber(action.type), currentStatus));
-                            }}
-                            className={`text-xs px-2.5 py-1 rounded-full font-medium transition-all border ${
-                              active ? `${ACTION_TYPE_COLORS[st]} border-transparent` : "bg-white text-gray-400 border-gray-200 hover:border-gray-300"
-                            }`}
-                          >
-                            {ACTION_TYPE_LABELS[st]}
-                          </button>
-                        );
-                      })}
-                      <span className="text-gray-200 text-xs">|</span>
-                      {/* Measurement — independent toggle */}
                       <button
                         type="button"
-                        onClick={() => {
-                          const currentStatus = hasStatus(action.type) ? "TEXT" : hasBoolean(action.type) ? "BOOLEAN" : null;
-                          updateAction(comp.id, action.id, "type", buildType(!hasNumber(action.type), currentStatus));
-                        }}
+                        onClick={() => updateAction(comp.id, action.id, "type", buildType(hasNumber(action.type), !hasStatus(action.type), hasBoolean(action.type)))}
+                        className={`text-xs px-2.5 py-1 rounded-full font-medium transition-all border ${
+                          hasStatus(action.type) ? `${ACTION_TYPE_COLORS.TEXT} border-transparent` : "bg-white text-gray-400 border-gray-200 hover:border-gray-300"
+                        }`}
+                      >
+                        Verificação
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateAction(comp.id, action.id, "type", buildType(hasNumber(action.type), hasStatus(action.type), !hasBoolean(action.type)))}
+                        className={`text-xs px-2.5 py-1 rounded-full font-medium transition-all border ${
+                          hasBoolean(action.type) ? `${ACTION_TYPE_COLORS.BOOLEAN} border-transparent` : "bg-white text-gray-400 border-gray-200 hover:border-gray-300"
+                        }`}
+                      >
+                        Troca / Confirmação
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateAction(comp.id, action.id, "type", buildType(!hasNumber(action.type), hasStatus(action.type), hasBoolean(action.type)))}
                         className={`text-xs px-2.5 py-1 rounded-full font-medium transition-all border ${
                           hasNumber(action.type) ? `${ACTION_TYPE_COLORS.NUMBER} border-transparent` : "bg-white text-gray-400 border-gray-200 hover:border-gray-300"
                         }`}
@@ -548,8 +547,8 @@ export default function ChecklistTemplateBuilder({ initialData, mode }: Checklis
                       </button>
                     </div>
 
-                    {/* Units (NUMBER only) */}
-                    {action.type === "NUMBER" && (
+                    {/* Units — shown for any type with measurement */}
+                    {hasNumber(action.type) && (
                       <div className="ml-7">
                         <div className="relative">
                           <button

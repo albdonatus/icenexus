@@ -144,19 +144,33 @@ export default async function ServiceOrderDetailPage({ params }: { params: Promi
                     let icon = <span className="text-gray-300">—</span>;
                     let valueDisplay: React.ReactNode = <span className="text-xs text-gray-400">Não preenchido</span>;
 
-                    if (action.type === "TEXT" || action.type === "NUMBER_TEXT") {
+                    const typeHasStatus = ["TEXT", "NUMBER_TEXT", "TEXT_BOOLEAN", "NUMBER_TEXT_BOOLEAN"].includes(action.type);
+                    const typeHasBoolean = ["BOOLEAN", "NUMBER_BOOLEAN", "TEXT_BOOLEAN", "NUMBER_TEXT_BOOLEAN"].includes(action.type);
+                    const typeHasNumber = ["NUMBER", "NUMBER_TEXT", "NUMBER_BOOLEAN", "NUMBER_TEXT_BOOLEAN"].includes(action.type);
+
+                    if (typeHasStatus) {
                       icon = <div className="flex-shrink-0 mt-0.5">{textStatusIcon(exec?.status)}</div>;
                       if (exec?.status) valueDisplay = <span className="text-xs text-gray-400 flex-shrink-0">{textStatusLabel[exec.status]}</span>;
                     }
-                    if (action.type === "BOOLEAN" || action.type === "NUMBER_BOOLEAN") {
-                      if (exec?.booleanValue === true) { icon = <CheckCircle2 className="w-4 h-4 text-green-500" />; valueDisplay = <span className="text-xs font-semibold text-green-700">Sim</span>; }
-                      else if (exec?.booleanValue === false) { icon = <XCircle className="w-4 h-4 text-red-500" />; valueDisplay = <span className="text-xs font-semibold text-red-700">Não</span>; }
+                    if (typeHasBoolean) {
+                      const boolBadge = exec?.booleanValue === true
+                        ? <span className="text-xs font-semibold text-green-700">Sim</span>
+                        : exec?.booleanValue === false
+                        ? <span className="text-xs font-semibold text-red-700">Não</span>
+                        : null;
+                      if (!typeHasStatus) {
+                        if (exec?.booleanValue === true) icon = <CheckCircle2 className="w-4 h-4 text-green-500" />;
+                        else if (exec?.booleanValue === false) icon = <XCircle className="w-4 h-4 text-red-500" />;
+                        if (boolBadge) valueDisplay = boolBadge;
+                      } else if (boolBadge) {
+                        valueDisplay = <div className="flex flex-col items-end gap-1">{valueDisplay}{boolBadge}</div>;
+                      }
                     }
-                    if (action.type === "NUMBER" || action.type === "NUMBER_TEXT" || action.type === "NUMBER_BOOLEAN") {
-                      if (action.type === "NUMBER") icon = exec?.numberValue != null ? <CheckCircle2 className="w-4 h-4 text-blue-500" /> : <span className="text-gray-300">—</span>;
+                    if (typeHasNumber) {
+                      if (!typeHasStatus && !typeHasBoolean) icon = exec?.numberValue != null ? <CheckCircle2 className="w-4 h-4 text-blue-500" /> : <span className="text-gray-300">—</span>;
                       if (exec?.numberValue != null) {
                         const numBadge = <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">{exec.numberValue} {exec.unit ?? ""}</span>;
-                        valueDisplay = action.type === "NUMBER" ? numBadge : <div className="flex flex-col items-end gap-1">{numBadge}{valueDisplay}</div>;
+                        valueDisplay = !typeHasStatus && !typeHasBoolean ? numBadge : <div className="flex flex-col items-end gap-1">{numBadge}{valueDisplay}</div>;
                       }
                     }
 

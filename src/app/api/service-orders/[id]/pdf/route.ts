@@ -31,7 +31,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
   if (!order) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const pdfBuffer = await generateOrderPdf(order);
+  const manager = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { companyLogo: true },
+  });
+
+  const pdfBuffer = await generateOrderPdf({ ...order, companyLogo: manager?.companyLogo ?? null });
 
   return new NextResponse(pdfBuffer as unknown as BodyInit, {
     headers: {

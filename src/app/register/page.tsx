@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -17,6 +15,7 @@ import {
   Snowflake,
   Wrench,
   ClipboardList,
+  Clock,
 } from "lucide-react";
 
 const features = [
@@ -59,8 +58,6 @@ function PasswordStrength({ password }: { password: string }) {
 }
 
 export default function RegisterPage() {
-  const router = useRouter();
-
   const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", confirm: "" });
   const [showPwd, setShowPwd] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -101,15 +98,6 @@ export default function RegisterPage() {
     }
 
     setStep("success");
-    // Auto-login após registro
-    setTimeout(async () => {
-      const result = await signIn("credentials", {
-        email: form.email,
-        password: form.password,
-        redirect: false,
-      });
-      if (result?.ok) router.push("/manager");
-    }, 1800);
   }
 
   return (
@@ -164,16 +152,32 @@ export default function RegisterPage() {
         <div className="flex-1 flex items-center justify-center px-5 sm:px-10 py-8">
           <div className="w-full max-w-md">
             {step === "success" ? (
-              /* ── Success state ── */
-              <div className="text-center space-y-4">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-                  <CheckCircle2 className="w-8 h-8 text-green-600" />
+              /* ── Pending approval state ── */
+              <div className="text-center space-y-5">
+                <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto">
+                  <Clock className="w-8 h-8 text-amber-500" />
                 </div>
-                <h2 className="text-xl font-bold text-gray-900">Conta criada com sucesso!</h2>
-                <p className="text-sm text-gray-500">Entrando no sistema automaticamente…</p>
-                <div className="flex justify-center mt-2">
-                  <div className="w-8 h-1 bg-violet-600 rounded-full animate-pulse" />
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Cadastro recebido!</h2>
+                  <p className="text-sm text-gray-500 mt-2 leading-relaxed">
+                    Sua conta está aguardando aprovação do administrador.<br />
+                    Você receberá um e-mail assim que o acesso for liberado.
+                  </p>
                 </div>
+                <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-left">
+                  <p className="text-xs font-semibold text-amber-700 mb-1">O que acontece agora?</p>
+                  <ul className="text-xs text-amber-600 space-y-1 list-disc list-inside">
+                    <li>O administrador foi notificado do seu cadastro</li>
+                    <li>Após a aprovação, você receberá um e-mail</li>
+                    <li>Depois é só entrar com seu e-mail e senha</li>
+                  </ul>
+                </div>
+                <a
+                  href="/login"
+                  className="inline-block text-sm text-violet-600 font-semibold hover:underline"
+                >
+                  Voltar para o login →
+                </a>
               </div>
             ) : (
               /* ── Form ── */
