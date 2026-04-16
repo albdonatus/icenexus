@@ -4,6 +4,8 @@ import Link from "next/link";
 import { Briefcase, Users, DollarSign, FileText, RefreshCw, AlertCircle, Clock, Calendar, ChevronRight } from "lucide-react";
 import DashboardCalendar, { type CalendarOrder } from "@/components/dashboard/DashboardCalendar";
 import OrderTableRow from "@/components/dashboard/OrderTableRow";
+import DashboardPeriodFilter from "@/components/dashboard/DashboardPeriodFilter";
+import { Suspense } from "react";
 
 function formatTime(date: Date): string {
   return new Date(date).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
@@ -41,25 +43,53 @@ function avatarColor(name: string): string {
   return avatarColors[name.charCodeAt(0) % avatarColors.length];
 }
 
-export default async function DashboardPage() {
+function getPeriodRange(period: string | undefined): { start: Date; end: Date; label: string } {
+  const now = new Date();
+  switch (period) {
+    case "last_month": {
+      const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const end = new Date(now.getFullYear(), now.getMonth(), 1);
+      return { start, end, label: start.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }).toUpperCase() };
+    }
+    case "3_months": {
+      const start = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+      return { start, end: now, label: "ÚLTIMOS 3 MESES" };
+    }
+    case "6_months": {
+      const start = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+      return { start, end: now, label: "ÚLTIMOS 6 MESES" };
+    }
+    case "this_year": {
+      const start = new Date(now.getFullYear(), 0, 1);
+      return { start, end: now, label: `ANO ${now.getFullYear()}` };
+    }
+    default: { // this_month
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      return { start, end: now, label: now.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }).toUpperCase() };
+    }
+  }
+}
+
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ period?: string }> }) {
   const session = await auth();
   const companyId = session!.user.companyId;
 
+  const { period } = await searchParams;
+  const { start: periodStart, end: periodEnd, label: periodLabel } = getPeriodRange(period);
+
   const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const monthName = now.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }).toUpperCase();
   const threeMonthsAhead = new Date(now.getFullYear(), now.getMonth() + 3, 1);
   const threeMonthsBack = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
   const [completedThisMonth, newClientsThisMonth, totalOrders, totalClients, recentOrders, calendarOrders, upcomingOrders] =
     await Promise.all([
-      prisma.serviceOrder.count({ where: { companyId, status: "COMPLETED", completedAt: { gte: startOfMonth } } }),
-      prisma.client.count({ where: { companyId, active: true, createdAt: { gte: startOfMonth } } }),
-      prisma.serviceOrder.count({ where: { companyId } }),
+      prisma.serviceOrder.count({ where: { companyId, status: "COMPLETED", completedAt: { gte: periodStart, lte: periodEnd } } }),
+      prisma.client.count({ where: { companyId, active: true, createdAt: { gte: periodStart, lte: periodEnd } } }),
+      prisma.serviceOrder.count({ where: { companyId, scheduledDate: { gte: periodStart, lte: periodEnd } } }),
       prisma.client.count({ where: { companyId, active: true } }),
       prisma.serviceOrder.findMany({
         take: 6,
-        where: { companyId },
+        where: { companyId, scheduledDate: { gte: periodStart, lte: periodEnd } },
         orderBy: { scheduledDate: "desc" },
         include: {
           client: { select: { name: true } },
@@ -93,12 +123,20 @@ export default async function DashboardPage() {
   const topStats = [
     { label: "Ordens de Serviço Concluídas", value: completedThisMonth, icon: Briefcase, iconBg: "bg-violet-100", iconColor: "text-violet-600" },
     { label: "Novos Clientes", value: newClientsThisMonth, icon: Users, iconBg: "bg-orange-100", iconColor: "text-orange-500" },
-    { label: `Faturamento em ${monthName}`, value: "—", icon: DollarSign, iconBg: "bg-teal-100", iconColor: "text-teal-600" },
+    { label: `Faturamento em ${periodLabel}`, value: "—", icon: DollarSign, iconBg: "bg-teal-100", iconColor: "text-teal-600" },
   ];
 
   return (
     <div className="flex gap-5">
       <div className="flex-1 min-w-0 space-y-5">
+        {/* Period filter */}
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{periodLabel}</p>
+          <Suspense fallback={null}>
+            <DashboardPeriodFilter />
+          </Suspense>
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {topStats.map((stat) => (
             <div key={stat.label} className="bg-white rounded-xl border border-gray-100 p-4 flex items-center gap-4">
@@ -118,7 +156,7 @@ export default async function DashboardPage() {
           <div className="grid grid-cols-3 divide-x divide-gray-100">
             <div className="text-center px-4">
               <p className="text-2xl font-bold text-gray-900">{totalOrders}</p>
-              <p className="text-xs text-gray-400 mt-1">Total de Ordens de Serviço</p>
+              <p className="text-xs text-gray-400 mt-1">OS no período</p>
             </div>
             <div className="text-center px-4">
               <p className="text-2xl font-bold text-gray-900">{totalClients}</p>

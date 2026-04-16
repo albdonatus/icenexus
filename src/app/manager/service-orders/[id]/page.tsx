@@ -8,6 +8,7 @@ import Card, { CardContent, CardHeader } from "@/components/ui/Card";
 import { OrderStatusBadge } from "@/components/ui/Badge";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import ShareReportButton from "@/components/service-orders/ShareReportButton";
+import DuplicateOrderButton from "@/components/service-orders/DuplicateOrderButton";
 
 export default async function ServiceOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -80,6 +81,7 @@ export default async function ServiceOrderDetailPage({ params }: { params: Promi
               <ShareReportButton orderId={id} />
             </>
           )}
+          <DuplicateOrderButton orderId={id} />
         </div>
       </div>
 

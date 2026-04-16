@@ -125,6 +125,7 @@ export default function NewServiceOrderPage() {
               <div className="flex flex-wrap gap-2">
                 {[
                   { value: "", label: "Sem recorrência" },
+                  { value: "DAILY", label: "Diária" },
                   { value: "MONTHLY", label: "Mensal" },
                   { value: "QUARTERLY", label: "Trimestral" },
                   { value: "SEMIANNUAL", label: "Semestral" },

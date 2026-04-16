@@ -4,10 +4,11 @@ import { prisma } from "@/lib/prisma";
 
 function nextDate(date: Date, recurrence: string): Date {
   const d = new Date(date);
-  if (recurrence === "MONTHLY")   { d.setMonth(d.getMonth() + 1); }
-  if (recurrence === "QUARTERLY") { d.setMonth(d.getMonth() + 3); }
-  if (recurrence === "SEMIANNUAL"){ d.setMonth(d.getMonth() + 6); }
-  if (recurrence === "ANNUAL")    { d.setFullYear(d.getFullYear() + 1); }
+  if (recurrence === "DAILY")      { d.setDate(d.getDate() + 1); }
+  if (recurrence === "MONTHLY")    { d.setMonth(d.getMonth() + 1); }
+  if (recurrence === "QUARTERLY")  { d.setMonth(d.getMonth() + 3); }
+  if (recurrence === "SEMIANNUAL") { d.setMonth(d.getMonth() + 6); }
+  if (recurrence === "ANNUAL")     { d.setFullYear(d.getFullYear() + 1); }
   return d;
 }
 
@@ -33,26 +34,34 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     data: { status: "COMPLETED", completedAt: new Date() },
   });
 
-  // Auto-create next occurrence if recurring and count allows
-  const hasMore = order.recurrence && order.recurrenceGroupId &&
-    (order.recurrencesLeft === null || order.recurrencesLeft > 1);
+  // Auto-create next occurrence only for infinite recurrences (finite ones are pre-created)
+  const isInfinite = order.recurrence && order.recurrenceGroupId && order.recurrencesLeft === null;
 
-  if (hasMore) {
+  if (isInfinite) {
     const next = nextDate(order.scheduledDate, order.recurrence!);
-    await prisma.serviceOrder.create({
-      data: {
-        companyId: order.companyId,
-        clientId: order.clientId,
-        equipmentId: order.equipmentId,
-        technicianId: order.technicianId,
-        templateId: order.templateId,
-        notes: order.notes,
-        scheduledDate: next,
-        recurrence: order.recurrence,
-        recurrenceGroupId: order.recurrenceGroupId,
-        recurrencesLeft: order.recurrencesLeft !== null ? order.recurrencesLeft - 1 : null,
+    const nextExists = await prisma.serviceOrder.count({
+      where: {
+        recurrenceGroupId: order.recurrenceGroupId!,
+        status: { in: ["PENDING", "IN_EXECUTION"] },
+        scheduledDate: { gt: order.scheduledDate },
       },
     });
+    if (!nextExists) {
+      await prisma.serviceOrder.create({
+        data: {
+          companyId: order.companyId,
+          clientId: order.clientId,
+          equipmentId: order.equipmentId,
+          technicianId: order.technicianId,
+          templateId: order.templateId,
+          notes: order.notes,
+          scheduledDate: next,
+          recurrence: order.recurrence,
+          recurrenceGroupId: order.recurrenceGroupId,
+          recurrencesLeft: null,
+        },
+      });
+    }
   }
 
   return NextResponse.json(updated);

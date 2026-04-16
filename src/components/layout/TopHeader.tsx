@@ -11,6 +11,8 @@ const pageTitles: Record<string, string> = {
   "/manager/technicians": "Equipe",
   "/manager/equipment": "Equipamentos",
   "/manager/checklists": "Checklists",
+  "/manager/measurements": "Medições",
+  "/manager/reports": "Relatórios",
 };
 
 function getTitle(pathname: string): string {

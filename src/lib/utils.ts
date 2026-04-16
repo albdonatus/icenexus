@@ -6,7 +6,10 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatDate(date: Date | string): string {
-  return new Date(date).toLocaleDateString("pt-BR", {
+  // Slice the ISO date portion only to avoid UTC-to-local timezone shift
+  const iso = (typeof date === "string" ? date : date.toISOString()).slice(0, 10);
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("pt-BR", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",

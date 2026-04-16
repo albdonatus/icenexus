@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+function advanceDate(date: Date, recurrence: string): Date {
+  const d = new Date(date);
+  if (recurrence === "DAILY")      { d.setDate(d.getDate() + 1); }
+  if (recurrence === "MONTHLY")    { d.setMonth(d.getMonth() + 1); }
+  if (recurrence === "QUARTERLY")  { d.setMonth(d.getMonth() + 3); }
+  if (recurrence === "SEMIANNUAL") { d.setMonth(d.getMonth() + 6); }
+  if (recurrence === "ANNUAL")     { d.setFullYear(d.getFullYear() + 1); }
+  return d;
+}
+
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session || session.user.role !== "MANAGER") {
@@ -52,7 +62,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Campos obrigatórios ausentes" }, { status: 400 });
   }
 
-  const validRecurrences = ["MONTHLY", "QUARTERLY", "SEMIANNUAL", "ANNUAL"];
+  const validRecurrences = ["DAILY", "MONTHLY", "QUARTERLY", "SEMIANNUAL", "ANNUAL"];
   const recurrenceValue = recurrence && validRecurrences.includes(recurrence) ? recurrence : null;
   const recurrenceGroupId = recurrenceValue ? crypto.randomUUID() : null;
   // recurrencesLeft: null = infinite; N = N total OS (this one + N-1 future)
@@ -60,17 +70,21 @@ export async function POST(req: NextRequest) {
     ? parseInt(recurrencesLeft)
     : null;
 
+  const baseData = {
+    clientId,
+    equipmentId,
+    technicianId,
+    templateId,
+    notes,
+    companyId: session.user.companyId,
+    recurrence: recurrenceValue,
+    recurrenceGroupId,
+  };
+
   const order = await prisma.serviceOrder.create({
     data: {
-      clientId,
-      equipmentId,
-      technicianId,
-      templateId,
+      ...baseData,
       scheduledDate: new Date(scheduledDate),
-      notes,
-      companyId: session.user.companyId,
-      recurrence: recurrenceValue,
-      recurrenceGroupId,
       recurrencesLeft: recurrencesLeftValue,
     },
     include: {
@@ -80,6 +94,17 @@ export async function POST(req: NextRequest) {
       template: { select: { id: true, name: true } },
     },
   });
+
+  // Pre-create all future finite occurrences so they're visible in the dashboard
+  if (recurrenceValue && recurrencesLeftValue && recurrencesLeftValue > 1) {
+    const futures = [];
+    let date = new Date(scheduledDate);
+    for (let i = 1; i < recurrencesLeftValue; i++) {
+      date = advanceDate(date, recurrenceValue);
+      futures.push({ ...baseData, recurrenceGroupId: recurrenceGroupId!, scheduledDate: new Date(date), recurrencesLeft: recurrencesLeftValue - i });
+    }
+    await prisma.serviceOrder.createMany({ data: futures });
+  }
 
   return NextResponse.json(order, { status: 201 });
 }

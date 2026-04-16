@@ -198,14 +198,7 @@ export default function ChecklistTemplateBuilder({ initialData, mode }: Checklis
     const equip = equipmentList.find((e) => e.id === equipId);
     if (equip && !equipmentType) setEquipmentType(equip.type);
 
-    if (components.length > 0) {
-      const confirmed = window.confirm(
-        `Substituir os ${components.length} componente(s) existentes pelos ${imported.length} componente(s) do equipamento "${equip?.name}"?`
-      );
-      if (!confirmed) { setImportingId(null); return; }
-    }
-
-    setComponents(imported);
+    setComponents((prev) => [...prev, ...imported]);
     if (!name && equip) setName(`Manutenção Preventiva - ${equip.type}`);
     setImportingId(null);
     setShowImportModal(false);
