@@ -20,21 +20,27 @@ export default async function AdminUsersPage() {
       active: true,
       pendingApproval: true,
       companyId: true,
+      companyName: true,
+      document: true,
       phone: true,
       createdAt: true,
     },
   });
 
-  // Build company name map: companyId → manager name
+  // Build company name map: companyId → manager name (fallback for technicians)
   const managers = users.filter((u) => u.role === "MANAGER");
   const companyMap: Record<string, string> = {};
   for (const m of managers) {
-    companyMap[m.companyId ?? m.id] = m.name;
+    companyMap[m.companyId ?? m.id] = m.companyName || m.name;
   }
 
   const enriched = users.map((u) => ({
     ...u,
-    companyName: companyMap[u.companyId ?? ""] ?? (u.role === "SUPERADMIN" ? "—" : u.companyId ?? "—"),
+    // For managers: use stored companyName. For technicians: use their manager's companyName.
+    companyName: u.role === "MANAGER"
+      ? (u.companyName || "")
+      : (companyMap[u.companyId ?? ""] ?? (u.role === "SUPERADMIN" ? "—" : "—")),
+    document: u.document || "",
     createdAt: u.createdAt.toISOString(),
   }));
 

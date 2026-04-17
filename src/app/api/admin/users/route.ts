@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
 
   const users = await prisma.user.findMany({
     where: role ? { role: role as "MANAGER" | "TECHNICIAN" | "SUPERADMIN" } : undefined,
-    select: { id: true, name: true, email: true, role: true, active: true, companyId: true, phone: true, createdAt: true },
+    select: { id: true, name: true, email: true, role: true, active: true, companyId: true, companyName: true, document: true, phone: true, createdAt: true },
     orderBy: [{ role: "asc" }, { name: "asc" }],
   });
 

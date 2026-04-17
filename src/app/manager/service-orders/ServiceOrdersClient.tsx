@@ -239,7 +239,7 @@ export default function ServiceOrdersClient({ orders }: Props) {
                   </p>
                 </div>
                 <p className="text-sm text-gray-500 ml-4 flex-shrink-0">
-                  {formatDate(new Date(order.scheduledDate))}
+                  {formatDate(order.scheduledDate)}
                 </p>
               </Link>
             ))}

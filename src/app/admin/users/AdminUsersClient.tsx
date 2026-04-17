@@ -15,6 +15,7 @@ type UserRow = {
   pendingApproval: boolean;
   companyId: string | null;
   companyName: string;
+  document: string;
   phone: string | null;
   createdAt: string;
 };
@@ -106,6 +107,13 @@ export default function AdminUsersClient({ users }: { users: UserRow[] }) {
               >
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-gray-900 text-sm">{user.name}</p>
+                  {user.companyName && (
+                    <p className="text-xs text-gray-700 font-medium flex items-center gap-1 mt-0.5">
+                      <Building2 className="w-3 h-3 text-gray-400" />
+                      {user.companyName}
+                      {user.document && <span className="text-gray-400 font-normal">· {user.document}</span>}
+                    </p>
+                  )}
                   <p className="text-xs text-gray-500">{user.email}</p>
                   {user.phone && <p className="text-xs text-gray-400">{user.phone}</p>}
                   <p className="text-[11px] text-gray-400 mt-0.5">Cadastrou em {formatDate(new Date(user.createdAt))}</p>
@@ -197,10 +205,26 @@ export default function AdminUsersClient({ users }: { users: UserRow[] }) {
                     {user.phone && <p className="text-xs text-gray-400">{user.phone}</p>}
                   </td>
                   <td className="px-4 py-3">
-                    <span className="flex items-center gap-1 text-xs text-gray-600">
-                      <Building2 className="w-3 h-3 text-gray-400" />
-                      {user.companyName}
-                    </span>
+                    {user.role === "MANAGER" ? (
+                      user.companyName ? (
+                        <div>
+                          <span className="flex items-center gap-1 text-xs text-gray-700 font-medium">
+                            <Building2 className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                            {user.companyName}
+                          </span>
+                          {user.document && (
+                            <p className="text-[10px] text-gray-400 mt-0.5 pl-4">{user.document}</p>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs font-semibold text-violet-600">Gestor</span>
+                      )
+                    ) : (
+                      <span className="flex items-center gap-1 text-xs text-gray-600">
+                        <Building2 className="w-3 h-3 text-gray-400" />
+                        {user.companyName}
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <span className={cn("text-xs font-semibold px-2 py-0.5 rounded-full", ROLE_COLOR[user.role] ?? "bg-gray-100 text-gray-600")}>

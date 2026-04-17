@@ -16,6 +16,8 @@ import {
   Wrench,
   ClipboardList,
   Clock,
+  Building2,
+  CreditCard,
 } from "lucide-react";
 
 const features = [
@@ -57,8 +59,34 @@ function PasswordStrength({ password }: { password: string }) {
   );
 }
 
+function formatDocument(value: string, type: "CPF" | "CNPJ"): string {
+  const digits = value.replace(/\D/g, "");
+  if (type === "CPF") {
+    return digits
+      .slice(0, 11)
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
+      .replace(/(\d{3})\.(\d{3})\.(\d{3})(\d{1,2})/, "$1.$2.$3-$4");
+  }
+  return digits
+    .slice(0, 14)
+    .replace(/(\d{2})(\d)/, "$1.$2")
+    .replace(/(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/(\d{2})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3/$4")
+    .replace(/(\d{2})\.(\d{3})\.(\d{3})\/(\d{4})(\d{1,2})/, "$1.$2.$3/$4-$5");
+}
+
 export default function RegisterPage() {
-  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", confirm: "" });
+  const [docType, setDocType] = useState<"CPF" | "CNPJ">("CNPJ");
+  const [form, setForm] = useState({
+    name: "",
+    companyName: "",
+    document: "",
+    email: "",
+    phone: "",
+    password: "",
+    confirm: "",
+  });
   const [showPwd, setShowPwd] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState("");
@@ -68,6 +96,15 @@ export default function RegisterPage() {
   function set(field: keyof typeof form) {
     return (e: React.ChangeEvent<HTMLInputElement>) =>
       setForm((prev) => ({ ...prev, [field]: e.target.value }));
+  }
+
+  function handleDocumentChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setForm((prev) => ({ ...prev, document: formatDocument(e.target.value, docType) }));
+  }
+
+  function handleDocTypeChange(type: "CPF" | "CNPJ") {
+    setDocType(type);
+    setForm((prev) => ({ ...prev, document: "" }));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -87,7 +124,14 @@ export default function RegisterPage() {
     const res = await fetch("/api/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: form.name, email: form.email, phone: form.phone, password: form.password }),
+      body: JSON.stringify({
+        name: form.name,
+        companyName: form.companyName || null,
+        document: form.document || null,
+        email: form.email,
+        phone: form.phone,
+        password: form.password,
+      }),
     });
     const data = await res.json();
     setLoading(false);
@@ -104,18 +148,15 @@ export default function RegisterPage() {
     <div className="min-h-screen flex flex-col lg:flex-row">
       {/* ── Left panel (desktop only) ── */}
       <div className="hidden lg:flex lg:w-[45%] bg-gradient-to-br from-violet-700 via-violet-600 to-purple-800 flex-col justify-between p-12 relative overflow-hidden">
-        {/* Background decoration */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-[-80px] left-[-80px] w-96 h-96 rounded-full bg-white" />
           <div className="absolute bottom-[-60px] right-[-60px] w-80 h-80 rounded-full bg-white" />
         </div>
 
-        {/* Logo */}
         <div className="relative z-10">
           <Image src="/LOGO_COR.png" alt="Ice Nexus IAR" width={180} height={54} className="object-contain brightness-0 invert" priority />
         </div>
 
-        {/* Middle content */}
         <div className="relative z-10 space-y-8">
           <div>
             <h1 className="text-3xl font-bold text-white leading-tight">
@@ -138,7 +179,6 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        {/* Bottom */}
         <p className="relative z-10 text-violet-300 text-xs">© 2026 Ice Nexus IAR. Todos os direitos reservados.</p>
       </div>
 
@@ -152,7 +192,6 @@ export default function RegisterPage() {
         <div className="flex-1 flex items-center justify-center px-5 sm:px-10 py-8">
           <div className="w-full max-w-md">
             {step === "success" ? (
-              /* ── Pending approval state ── */
               <div className="text-center space-y-5">
                 <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto">
                   <Clock className="w-8 h-8 text-amber-500" />
@@ -172,15 +211,11 @@ export default function RegisterPage() {
                     <li>Depois é só entrar com seu e-mail e senha</li>
                   </ul>
                 </div>
-                <a
-                  href="/login"
-                  className="inline-block text-sm text-violet-600 font-semibold hover:underline"
-                >
+                <a href="/login" className="inline-block text-sm text-violet-600 font-semibold hover:underline">
                   Voltar para o login →
                 </a>
               </div>
             ) : (
-              /* ── Form ── */
               <>
                 <div className="mb-7">
                   <h2 className="text-2xl font-bold text-gray-900">Criar conta</h2>
@@ -196,9 +231,9 @@ export default function RegisterPage() {
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  {/* Name */}
+                  {/* Gestor name */}
                   <div>
-                    <label className="text-xs font-semibold text-gray-600 block mb-1.5">Nome completo *</label>
+                    <label className="text-xs font-semibold text-gray-600 block mb-1.5">Nome do responsável *</label>
                     <div className="relative">
                       <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <input
@@ -210,6 +245,70 @@ export default function RegisterPage() {
                         autoComplete="name"
                         className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent"
                       />
+                    </div>
+                  </div>
+
+                  {/* Company name */}
+                  <div>
+                    <label className="text-xs font-semibold text-gray-600 block mb-1.5">
+                      Nome da empresa <span className="text-gray-400 font-normal">(opcional)</span>
+                    </label>
+                    <div className="relative">
+                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input
+                        type="text"
+                        value={form.companyName}
+                        onChange={set("companyName")}
+                        placeholder="Razão social ou nome fantasia"
+                        autoComplete="organization"
+                        className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Document: CPF / CNPJ */}
+                  <div>
+                    <label className="text-xs font-semibold text-gray-600 block mb-1.5">
+                      Documento <span className="text-gray-400 font-normal">(opcional)</span>
+                    </label>
+                    <div className="flex gap-2">
+                      {/* Type toggle */}
+                      <div className="flex border border-gray-200 rounded-xl overflow-hidden flex-shrink-0 text-xs font-semibold">
+                        <button
+                          type="button"
+                          onClick={() => handleDocTypeChange("CNPJ")}
+                          className={`px-3 py-2.5 transition-colors ${
+                            docType === "CNPJ"
+                              ? "bg-violet-600 text-white"
+                              : "bg-white text-gray-500 hover:bg-gray-50"
+                          }`}
+                        >
+                          CNPJ
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDocTypeChange("CPF")}
+                          className={`px-3 py-2.5 transition-colors border-l border-gray-200 ${
+                            docType === "CPF"
+                              ? "bg-violet-600 text-white"
+                              : "bg-white text-gray-500 hover:bg-gray-50"
+                          }`}
+                        >
+                          CPF
+                        </button>
+                      </div>
+                      {/* Document input */}
+                      <div className="relative flex-1">
+                        <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                          type="text"
+                          value={form.document}
+                          onChange={handleDocumentChange}
+                          placeholder={docType === "CNPJ" ? "00.000.000/0000-00" : "000.000.000-00"}
+                          inputMode="numeric"
+                          className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent"
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -248,7 +347,7 @@ export default function RegisterPage() {
                     </div>
                   </div>
 
-                  {/* Password row — side by side on sm+ */}
+                  {/* Password row */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="text-xs font-semibold text-gray-600 block mb-1.5">Senha *</label>
@@ -338,7 +437,6 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        {/* Mobile footer */}
         <p className="lg:hidden text-center text-xs text-gray-400 pb-6">
           © 2026 Ice Nexus IAR
         </p>

@@ -5,7 +5,7 @@ import { sendPendingApprovalToAdmins } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { name, email, phone, password } = body;
+  const { name, companyName, document, email, phone, password } = body;
 
   if (!name || !email || !password) {
     return NextResponse.json({ error: "Preencha todos os campos obrigatórios." }, { status: 400 });
@@ -28,6 +28,8 @@ export async function POST(req: NextRequest) {
     const u = await tx.user.create({
       data: {
         name,
+        companyName: companyName || null,
+        document: document || null,
         email,
         phone: phone || null,
         passwordHash,

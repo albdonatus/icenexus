@@ -40,8 +40,13 @@ export default function DashboardCalendar({ orders }: { orders: CalendarOrder[] 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const daysInPrevMonth = new Date(year, month, 0).getDate();
 
+  function parseScheduledDate(iso: string): Date {
+    const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+    return new Date(y, m - 1, d);
+  }
+
   const ordersOnDate = (date: Date) =>
-    orders.filter((o) => isSameDay(new Date(o.scheduledDate), date));
+    orders.filter((o) => isSameDay(parseScheduledDate(o.scheduledDate), date));
 
   const selectedOrders = ordersOnDate(selectedDate);
 

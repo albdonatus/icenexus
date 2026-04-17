@@ -16,7 +16,7 @@ export default function AdminEditUserPage() {
   const [error, setError] = useState("");
   const [managers, setManagers] = useState<{ id: string; name: string; companyId: string | null }[]>([]);
   const [form, setForm] = useState({
-    name: "", email: "", phone: "", role: "", companyId: "", active: true, password: "",
+    name: "", companyName: "", document: "", email: "", phone: "", role: "", companyId: "", active: true, password: "",
   });
 
   useEffect(() => {
@@ -26,6 +26,8 @@ export default function AdminEditUserPage() {
     ]).then(([user, mgrs]) => {
       setForm({
         name: user.name ?? "",
+        companyName: user.companyName ?? "",
+        document: user.document ?? "",
         email: user.email ?? "",
         phone: user.phone ?? "",
         role: user.role ?? "TECHNICIAN",
@@ -47,6 +49,8 @@ export default function AdminEditUserPage() {
     setError("");
     const body: Record<string, unknown> = {
       name: form.name,
+      companyName: form.companyName || null,
+      document: form.document || null,
       email: form.email,
       phone: form.phone,
       role: form.role,
@@ -85,7 +89,9 @@ export default function AdminEditUserPage() {
             <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 mb-4">{error}</div>
           )}
           <form onSubmit={handleSubmit} className="space-y-4">
-            <Input label="Nome *" value={form.name} onChange={(e) => update("name", e.target.value)} required />
+            <Input label="Nome do responsável *" value={form.name} onChange={(e) => update("name", e.target.value)} required />
+            <Input label="Nome da empresa" value={form.companyName} onChange={(e) => update("companyName", e.target.value)} placeholder="Razão social ou nome fantasia" />
+            <Input label="CPF / CNPJ" value={form.document} onChange={(e) => update("document", e.target.value)} placeholder="00.000.000/0000-00" />
             <Input label="Email *" type="email" value={form.email} onChange={(e) => update("email", e.target.value)} required />
             <Input label="Nova Senha" type="password" placeholder="Deixe em branco para manter" value={form.password} onChange={(e) => update("password", e.target.value)} />
             <Input label="Telefone" value={form.phone} onChange={(e) => update("phone", e.target.value)} />
