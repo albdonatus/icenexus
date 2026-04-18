@@ -451,11 +451,15 @@ export default function ExecutionScreen({
                           !isReadOnly ? (
                             <div className="flex gap-2 items-center">
                               <input
-                                type="number"
-                                step="any"
+                                type="text"
+                                inputMode="decimal"
                                 placeholder="Valor"
                                 value={exec?.numberValue ?? ""}
-                                onChange={(e) => updateExec(action.id, { numberValue: e.target.value })}
+                                onChange={(e) => {
+                                  const raw = e.target.value.replace(",", ".");
+                                  if (raw === "" || raw === "-" || /^-?\d*\.?\d*$/.test(raw))
+                                    updateExec(action.id, { numberValue: raw });
+                                }}
                                 className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
                               />
                               <select
@@ -551,11 +555,15 @@ export default function ExecutionScreen({
                             {!isReadOnly ? (
                               <div className="flex gap-2 items-center">
                                 <input
-                                  type="number"
-                                  step="any"
+                                  type="text"
+                                  inputMode="decimal"
                                   placeholder="Valor medido"
                                   value={exec?.numberValue ?? ""}
-                                  onChange={(e) => updateExec(action.id, { numberValue: e.target.value })}
+                                  onChange={(e) => {
+                                    const raw = e.target.value.replace(",", ".");
+                                    if (raw === "" || raw === "-" || /^-?\d*\.?\d*$/.test(raw))
+                                      updateExec(action.id, { numberValue: raw });
+                                  }}
                                   className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
                                 />
                                 <select
@@ -623,11 +631,15 @@ export default function ExecutionScreen({
                             {!isReadOnly ? (
                               <div className="flex gap-2 items-center">
                                 <input
-                                  type="number"
-                                  step="any"
+                                  type="text"
+                                  inputMode="decimal"
                                   placeholder="Valor medido"
                                   value={exec?.numberValue ?? ""}
-                                  onChange={(e) => updateExec(action.id, { numberValue: e.target.value })}
+                                  onChange={(e) => {
+                                    const raw = e.target.value.replace(",", ".");
+                                    if (raw === "" || raw === "-" || /^-?\d*\.?\d*$/.test(raw))
+                                      updateExec(action.id, { numberValue: raw });
+                                  }}
                                   className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
                                 />
                                 <select
