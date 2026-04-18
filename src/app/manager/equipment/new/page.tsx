@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Plus, Trash2, ChevronDown, ChevronUp, Paperclip, X, FileText, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, ChevronDown, ChevronUp, Paperclip, X, FileText, Loader2, Copy } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
@@ -58,6 +58,24 @@ function NewEquipmentForm() {
 
   function removeComponent(id: string) {
     setComponents((prev) => prev.filter((c) => c.id !== id));
+  }
+
+  function duplicateComponent(id: string) {
+    setComponents((prev) => {
+      const idx = prev.findIndex((c) => c.id === id);
+      if (idx === -1) return prev;
+      const source = prev[idx];
+      const copy: EquipComp = {
+        id: genId(),
+        name: `${source.name} (cópia)`,
+        items: source.items.map((item) => ({ ...item, id: genId() })),
+        open: true,
+        pendingFiles: [],
+      };
+      const next = [...prev];
+      next.splice(idx + 1, 0, copy);
+      return next;
+    });
   }
 
   function toggleComponent(id: string) {
@@ -240,6 +258,14 @@ function NewEquipmentForm() {
                       className="p-1 text-gray-400 hover:text-gray-600"
                     >
                       {comp.open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => duplicateComponent(comp.id)}
+                      className="p-1 text-gray-300 hover:text-violet-500"
+                      title="Duplicar grupo"
+                    >
+                      <Copy className="w-4 h-4" />
                     </button>
                     <button
                       type="button"
