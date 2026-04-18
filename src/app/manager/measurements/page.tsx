@@ -21,8 +21,25 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit" });
 }
 
+function formatTime(iso: string) {
+  return new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
+
 function formatDateAxis(iso: string) {
   return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+}
+
+function CustomXAxisTick({ x, y, payload }: { x: number; y: number; payload: { value: string } }) {
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text x={0} y={0} dy={12} textAnchor="middle" fontSize={11} fill="#9ca3af">
+        {formatDateAxis(payload.value)}
+      </text>
+      <text x={0} y={0} dy={24} textAnchor="middle" fontSize={10} fill="#a78bfa">
+        {formatTime(payload.value)}
+      </text>
+    </g>
+  );
 }
 
 function avg(pts: DataPoint[]) {
@@ -36,7 +53,7 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: { payl
   return (
     <div className="bg-white border border-gray-200 rounded-xl shadow-lg px-4 py-3 text-xs min-w-[180px]">
       <p className="font-bold text-gray-900 text-sm mb-1">{p.value} {p.unit}</p>
-      <p className="text-gray-500">{formatDate(p.date)}</p>
+      <p className="text-gray-500">{formatDate(p.date)} <span className="text-violet-500 font-medium">{formatTime(p.date)}</span></p>
       <p className="text-gray-400 mt-1">{p.technician}</p>
       <p className="text-gray-400 truncate max-w-[200px]">{p.checklist}</p>
       <Link href={`/manager/service-orders/${p.orderId}`} className="text-violet-600 hover:underline mt-1 block">
@@ -207,10 +224,10 @@ export default function MeasurementsPage() {
                     <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                     <XAxis
                       dataKey="date"
-                      tickFormatter={formatDateAxis}
-                      tick={{ fontSize: 11, fill: "#9ca3af" }}
+                      tick={<CustomXAxisTick x={0} y={0} payload={{ value: "" }} />}
                       axisLine={false}
                       tickLine={false}
+                      height={40}
                     />
                     <YAxis
                       domain={[yMin, yMax]}
@@ -258,7 +275,10 @@ export default function MeasurementsPage() {
                     <tbody className="divide-y divide-gray-50">
                       {[...points].reverse().map((p, i) => (
                         <tr key={i} className="hover:bg-gray-50">
-                          <td className="px-5 py-3 text-gray-600">{formatDate(p.date)}</td>
+                          <td className="px-5 py-3 text-gray-600">
+                            {formatDate(p.date)}
+                            <span className="block text-[10px] text-violet-500 font-medium">{formatTime(p.date)}</span>
+                          </td>
                           <td className="px-4 py-3 font-semibold text-gray-900">{p.value} {p.unit}</td>
                           <td className="px-4 py-3 text-gray-500">{p.technician}</td>
                           <td className="px-4 py-3 text-gray-400 max-w-[180px] truncate">{p.checklist}</td>
